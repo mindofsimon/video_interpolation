@@ -28,7 +28,7 @@ label_list = []  # list of video labels
 
 
 # in csv_train_path put the path of the csv file containing training video informations
-csv_train_path = 'C:/Users/maria/OneDrive/Desktop/polimi/MAE/thesis/create_interpolated_videos/stamm_train_videos.csv'
+csv_train_path = '/nas/home/smariani/video_interpolation/stamm/train.csv'
 with open(csv_train_path, 'r') as videos:
     data = csv.reader(videos, delimiter=',')
     for row in data:
@@ -52,7 +52,7 @@ coefficients = []
 label_list = []
 
 # in csv_test_path put the path of the csv file containing testing video informations
-csv_test_path = 'C:/Users/maria/OneDrive/Desktop/polimi/MAE/thesis/create_interpolated_videos/stamm_test_videos.csv'
+csv_test_path = '/nas/home/smariani/video_interpolation/stamm/test.csv'
 with open(csv_test_path, 'r') as videos:
     data = csv.reader(videos, delimiter=',')
     for row in data:
