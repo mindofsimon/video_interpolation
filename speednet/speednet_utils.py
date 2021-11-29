@@ -52,18 +52,18 @@ def load_data():
     """
 
     # train ds
-    originals_csv = 'C:/Users/maria/OneDrive/Desktop/polimi/MAE/thesis/create_interpolated_videos/speednet_train_videos.csv'
-    manipulated_fold = 'C:/Users/maria/OneDrive/Desktop/polimi/MAE/thesis/kinetics400/kinetics_videos/train/2x/'
+    originals_csv = '/nas/home/smariani/video_interpolation/speednet/train.csv'
+    manipulated_fold = ''
     dataset = VideoDataset(originals_csv, manipulated_fold, training=True)
     train_data_loader = DataLoader(dataset, batch_size=2, shuffle=False, num_workers=2)
 
     # test ds
-    originals_csv = 'C:/Users/maria/OneDrive/Desktop/polimi/MAE/thesis/create_interpolated_videos/speednet_test_videos.csv'
+    originals_csv = '/nas/home/smariani/video_interpolation/speednet/test.csv'
     test_dataset = VideoDataset(originals_csv, manipulated_fold, training=False)
     test_data_loader = DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=2)
 
     # valid ds
-    originals_csv = 'C:/Users/maria/OneDrive/Desktop/polimi/MAE/thesis/create_interpolated_videos/speednet_validation_videos.csv'
+    originals_csv = '/nas/home/smariani/video_interpolation/speednet/validation.csv'
     valid_dataset = VideoDataset(originals_csv, manipulated_fold, training=False)
     valid_data_loader = DataLoader(valid_dataset, batch_size=1, shuffle=True, num_workers=2)
 
