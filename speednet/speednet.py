@@ -50,7 +50,7 @@ def training(optimizer, criterion, model, train_dl):
         # building input tensor
         frames_list_1 = preprocess_train_video(video_path_1, video_label_1, T, N)
         frames_list_2 = preprocess_train_video(video_path_2, video_label_2, T, N)
-        frames_list = [frames_list_1, frames_list_2]
+        frames_list = np.array([frames_list_1, frames_list_2])
         data = torch.autograd.Variable(torch.tensor(frames_list, dtype=float))
         data = torch.reshape(data, (2, T, N, N, 3))
         data = torch.permute(data, [0, 4, 1, 2, 3])
@@ -86,6 +86,7 @@ def validating(criterion, model, valid_dl):
             video_path = video_path[0]
             video_label = float(video_label[0])
             frames_list = preprocess_test_video(video_path, N, T)
+            frames_list = np.array([frames_list])
             data = torch.autograd.Variable(torch.tensor(frames_list, dtype=float))
             data = torch.reshape(data, (1, T, N, N, 3))
             data = torch.permute(data, [0, 4, 1, 2, 3])
@@ -125,6 +126,7 @@ def testing(model, test_dl):
             video_label = float(video_label[0])
             # building input tensor
             frames_list = preprocess_test_video(video_path, N, T)
+            frames_list = np.array([frames_list])
             data = torch.autograd.Variable(torch.tensor(frames_list, dtype=float))
             data = torch.reshape(data, (1, T, N, N, 3))
             data = torch.permute(data, [0, 4, 1, 2, 3])
