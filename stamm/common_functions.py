@@ -69,8 +69,8 @@ def cut_list_decimals(number_list):
     :param number_list: input list (of numbers...)
     :return: list of elements cut at 3rd decimal
     """
-    for i in range(len(number_list)):
-        number_list[i] = round(number_list[i], 3)
+    number_list = np.array(number_list)
+    number_list = np.round(number_list, 3)
 
     return number_list
 
@@ -82,10 +82,10 @@ def regression_error_metrics(pred, true_lab):
     :param true_lab: true labels list
     :return: mean bias and variance
     """
-    m_b = []
-    for i in range(len(pred)):
-        m_b.append(pred[i] - float(true_lab[i]))
-
+    pred = np.array(pred)
+    true_lab = np.array(true_lab)
+    true_lab = true_lab.astype(float)
+    m_b = pred - true_lab
     var = np.var(m_b)
     m_b = sum(m_b)/len(pred)
     return m_b, var
@@ -160,14 +160,13 @@ def recombine_efs_estimations(medi, medb, medp, mapi, mapb, mapp, size_list):
     """
     n_elements = len(size_list)
     estimation = [None]*n_elements
-    for index in range(len(medi)):
-        estimation[mapi[index]] = medi[index]
-
-    for index in range(len(medb)):
-        estimation[mapb[index]] = medb[index]
-
-    for index in range(len(medp)):
-        estimation[mapp[index]] = medp[index]
+    estimation = np.array(estimation)
+    medi = np.array(medi)
+    medb = np.array(medb)
+    medp = np.array(medp)
+    estimation[mapi] = medi
+    estimation[mapb] = medb
+    estimation[mapp] = medp
 
     return estimation
 
@@ -204,7 +203,7 @@ def get_frame_type_lists(type_list, size_list):
     return i_list, i_mapping_list, b_list, b_mapping_list, p_list, p_mapping_list
 
 
-def create_json_files(vid):
+def create_json_file(vid):
     """
     Creates data.json containing video informations.
     :param vid: input video

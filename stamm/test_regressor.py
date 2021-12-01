@@ -21,7 +21,7 @@ with open(csv_test_path, 'r') as videos:
         video_label = row[1]
         video_smp = row[2]
         # CREATING JSON FILES AND POPULATING LISTS
-        create_json_files(video_path)
+        create_json_file(video_path)
         frame_size_list, frame_type_list, color_list = read_json_file()
 
         # DECOMPOSING EFS TO FIND RESIDUALS

@@ -34,6 +34,6 @@ def plot_efs(frame_size_list, color_list):  # plots a video encoded frame size s
 
 
 path = '/nas/public/dataset/EVA-7K/Videos/Facebook/subset_avidemux/D28_V_outdoor_move_0001.mp4'  # insert here the path of the video to display
-common_functions.create_json_files(path)
+common_functions.create_json_file(path)
 f_sizes, f_types, f_colors = common_functions.read_json_file()
 plot_efs(f_sizes, f_colors)
