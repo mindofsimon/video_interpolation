@@ -141,9 +141,7 @@ def calculate_residuals(efs, estimation):
     :param estimation: encoded frame size sequence estimation of a video
     :return: residuals of the difference between the two sequences.
     """
-    difference = []
-    for i in range(len(efs)):
-        difference.append(efs[i]-estimation[i])
+    difference = np.array(efs) - np.array(estimation)
 
     return difference
 
@@ -194,26 +192,14 @@ def get_frame_type_lists(type_list, size_list):
                 b_mapping_lists = [2,6,9]
                 p_mapping_lists = [1,4,5,8]
     """
-    i_list = []
-    b_list = []
-    p_list = []
-    i = 0
-    i_mapping_list = []
-    b_mapping_list = []
-    p_mapping_list = []
-    for t in type_list:
-        if t == "I":
-            i_list.append(size_list[i])
-            i_mapping_list.append(i)
-        else:
-            if t == "B":
-                b_list.append(size_list[i])
-                b_mapping_list.append(i)
-            else:
-                p_list.append(size_list[i])
-                p_mapping_list.append(i)
-
-        i = i+1
+    size_list = np.array(size_list)
+    type_list = np.array(type_list)
+    i_mapping_list = np.where(type_list == 'I')[0]
+    i_list = size_list[i_mapping_list]
+    b_mapping_list = np.where(type_list == 'B')[0]
+    b_list = size_list[b_mapping_list]
+    p_mapping_list = np.where(type_list == 'P')[0]
+    p_list = size_list[p_mapping_list]
 
     return i_list, i_mapping_list, b_list, b_mapping_list, p_list, p_mapping_list
 
