@@ -10,12 +10,32 @@ import csv
 import os
 
 
+# FOR SPEEDNET (KINETICS400 VIDEOS)
 smp = 2
-originals_root = '/'
-manipulated_root = '/'
-with open('videos.csv', mode='w', newline="") as videos:
+
+# TEST
+originals_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/originals/'
+manipulated_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/2x/'
+with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/test.csv', mode='w', newline="") as videos:
     videos_writer = csv.writer(videos, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     for v in os.listdir(originals_root):
         videos_writer.writerow([originals_root + v, "0", "1"])
-    for v in os.listdir(manipulated_root):
+        videos_writer.writerow([manipulated_root + v, "1", smp])
+
+# TRAIN
+originals_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/originals/'
+manipulated_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/2x/'
+with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/train.csv', mode='w', newline="") as videos:
+    videos_writer = csv.writer(videos, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    for v in os.listdir(originals_root):
+        videos_writer.writerow([originals_root + v, "0", "1"])
+        videos_writer.writerow([manipulated_root + v, "1", smp])
+
+# VALIDATION
+originals_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/originals/'
+manipulated_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/2x/'
+with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/validation.csv', mode='w', newline="") as videos:
+    videos_writer = csv.writer(videos, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    for v in os.listdir(originals_root):
+        videos_writer.writerow([originals_root + v, "0", "1"])
         videos_writer.writerow([manipulated_root + v, "1", smp])
