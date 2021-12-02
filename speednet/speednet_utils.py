@@ -44,7 +44,6 @@ def load_data():
 
     The train videos are loaded in double batch (original, manipulated).
     Test and validation videos are loaded in single batch.
-    Manipulated_fold is useless if training=False, see load_data.py for more details...
 
     Be careful to put in originals csv the path to the video info csv files!
 
@@ -52,19 +51,18 @@ def load_data():
     """
 
     # train ds
-    originals_csv = '/nas/home/smariani/video_interpolation/speednet/train.csv'
-    manipulated_fold = ''
-    dataset = VideoDataset(originals_csv, manipulated_fold, training=True)
+    originals_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/train.csv'
+    dataset = VideoDataset(originals_csv)
     train_data_loader = DataLoader(dataset, batch_size=2, shuffle=False, num_workers=2)
 
     # test ds
-    originals_csv = '/nas/home/smariani/video_interpolation/speednet/test.csv'
-    test_dataset = VideoDataset(originals_csv, manipulated_fold, training=False)
+    originals_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/test.csv'
+    test_dataset = VideoDataset(originals_csv)
     test_data_loader = DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=2)
 
     # valid ds
-    originals_csv = '/nas/home/smariani/video_interpolation/speednet/validation.csv'
-    valid_dataset = VideoDataset(originals_csv, manipulated_fold, training=False)
+    originals_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/validation.csv'
+    valid_dataset = VideoDataset(originals_csv)
     valid_data_loader = DataLoader(valid_dataset, batch_size=1, shuffle=True, num_workers=2)
 
     return train_data_loader, test_data_loader, valid_data_loader

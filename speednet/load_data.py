@@ -1,31 +1,37 @@
 """
 Building a video dataset from csv file.
-
-For validation and testing datasets (training=False) we add all the files in the csv.
-So validation and testing csv files will contain original and manipulated videos.
-
-For training dataset (training=True) we add all the files in the csv (which consists in just the original files) then we will add manually the manipulated copy.
-This to ensure that the batch extraction will be in order, so that each batch will contain (original, manipulated) version of a video
+csv file must contain 3 columns per row (path, class, speed manipulation parameter).
 """
 
 from torch.utils.data import Dataset
 import csv
-import os
 
 
 class VideoDataset(Dataset):
-    def __init__(self, data_folder, manipulated_folder, training):
+    """
+    Video Dataset class
+    """
+    def __init__(self, csv_path):
+        """
+        Class constructor
+        :param csv_path: path to the csv file containing video information
+        """
         self.samples = []
 
-        with open(data_folder, 'r') as videos:
+        with open(csv_path, 'r') as videos:
             data = csv.reader(videos, delimiter=',')
             for row in data:
                 self.samples.append((row[0], row[1], row[2]))
-                if training:
-                    self.samples.append((str(manipulated_folder + os.path.basename(row[0])), str(1), str(2)))
 
     def __len__(self):
+        """
+        :return: dataset length
+        """
         return len(self.samples)
 
     def __getitem__(self, idx):
+        """
+        :param idx: position of an element in the dataset
+        :return: element in the dataset in position idx
+        """
         return self.samples[idx]
