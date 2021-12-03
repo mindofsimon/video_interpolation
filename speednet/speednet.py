@@ -180,7 +180,7 @@ def main():
     # SAVING TRAINED MODEL
     torch.save(model.state_dict(), SAVE_PATH)
 
-    # TESTING (here is still on 64 frames, in speednet_test.py is on 16 frames)
+    # TESTING (here is still on 32 frames, in speednet_test.py is on 16 frames)
     print("TESTING SPEEDNET")
     model.eval()
     testing(model, test_dl, platf)
