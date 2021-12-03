@@ -148,9 +148,11 @@ def preprocess_train_video(vid, state, T, N):
         f_list.append(frame_rgb/255)
         success, frame = cap.read()
 
-    f_list = f_list[0:(3 * T)]
+    if len(f_list) > (3*T):  # a video could have less than 3*T frames! (and also than T frames!)
+        f_list = f_list[0:(3 * T)]
+
     if state == 1.0:  # sped up video
-        f_list = f_list[::2]  # temporal augmentation
+        f_list = f_list[::2]  # temporal augmentation (2 is for 2x speed videos!)
         # for the original videos we do nothing (like ::1)
 
     f_list = f_list[0:T]  # taking only T frames
@@ -199,7 +201,7 @@ def test_val_data_processing(batch, N, T):
     video_label = float(video_label[0])
     frames_list = preprocess_test_video(video_path, N, T)
     frames_list = np.array([frames_list])
-    data = torch.autograd.Variable(torch.tensor(frames_list, dtype=float))
+    data = torch.autograd.Variable(torch.tensor(frames_list))
     data = torch.reshape(data, (1, T, N, N, 3))
     data = torch.permute(data, [0, 4, 1, 2, 3])
     data = data.float()
@@ -223,9 +225,8 @@ def train_data_processing(batch, N, T):
     # building input tensor
     frames_list_1 = preprocess_train_video(video_path_1, video_label_1, T, N)
     frames_list_2 = preprocess_train_video(video_path_2, video_label_2, T, N)
-    # frames_list = [frames_list_1, frames_list_2]
     frames_list = np.array([frames_list_1, frames_list_2])
-    data = torch.autograd.Variable(torch.tensor(frames_list, dtype=float))
+    data = torch.autograd.Variable(torch.tensor(frames_list))
     data = torch.reshape(data, (2, T, N, N, 3))
     data = torch.permute(data, [0, 4, 1, 2, 3])
     data = data.float()

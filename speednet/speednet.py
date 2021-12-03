@@ -4,7 +4,7 @@ It includes Training, Validation and Testing.
 The model takes as input a tensor of size [BATCH_SIZE, N_CHANNELS, N_FRAMES, HEIGHT, WIDTH].
 
 N_CHANNELS is always 3.
-N_FRAMES should be 64.
+N_FRAMES is set 32.
 HEIGHT and WIDTH are both set to 224 pixels.
 BATCH SIZE is 2 for training (we train with a double batch composed by an original video and its manipulated version) and 1 for test and validation.
 
@@ -21,7 +21,7 @@ from tqdm import tqdm
 
 
 # Input Parameters
-T = 64  # frame number
+T = 32  # frame number
 N = 224  # frame size (N x N)
 SAVE_PATH = 'speednet.pth'  # location of model
 
@@ -37,7 +37,7 @@ def training(optimizer, criterion, model, train_dl, platf):
     :return: nothing
     """
 
-    for batch in tqdm(train_dl, total=len(train_dl.dataset), desc='training'):
+    for batch in tqdm(train_dl, total=len(train_dl), desc='training'):
         # getting files path and label (each batch will contain original and manipulated versions of same video)
         # video 1 is original (class=0.0)
         # video 2 is manipulated (class=1.0)
@@ -71,7 +71,7 @@ def validating(criterion, model, valid_dl, platf):
     val_count = 0
     model.eval()
     with torch.no_grad():
-        for batch in tqdm(valid_dl, total=len(valid_dl.dataset), desc='validating'):
+        for batch in tqdm(valid_dl, total=len(valid_dl), desc='validating'):
             data, video_label = test_val_data_processing(batch, N, T)
             data = data.to(platf)
             video_label = torch.tensor([[video_label]])
@@ -104,7 +104,7 @@ def testing(model, test_dl, platf):
     predictions_list = []
 
     with torch.no_grad():
-        for batch in tqdm(test_dl, total=len(test_dl.dataset), desc='testing'):
+        for batch in tqdm(test_dl, total=len(test_dl), desc='testing'):
             # getting file path and label
             data, video_label = test_val_data_processing(batch, N, T)
             # predicting logits and converting into probability
@@ -180,7 +180,7 @@ def main():
     # SAVING TRAINED MODEL
     torch.save(model.state_dict(), SAVE_PATH)
 
-    # TESTING
+    # TESTING (here is still on 64 frames, in speednet_test.py is on 16 frames)
     print("TESTING SPEEDNET")
     model.eval()
     testing(model, test_dl, platf)
