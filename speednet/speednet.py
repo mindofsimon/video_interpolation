@@ -8,7 +8,7 @@ N_FRAMES should be 64.
 HEIGHT and WIDTH are both set to 224 pixels.
 BATCH SIZE is 2 for training (we train with a double batch composed by an original video and its manipulated version) and 1 for test and validation.
 
-Input videos are loaded through data loaders (check load_data.py and common_functuons.py for more details).
+Input videos are loaded through data loaders (check load_data.py and speednet_utils.py for more details).
 """
 
 import torch
@@ -18,6 +18,7 @@ from s3dg_torch import S3DG
 from speednet_utils import *
 import numpy as np
 import pandas as pd
+from torch_utils import *
 
 
 # Input Parameters
@@ -26,13 +27,14 @@ N = 224  # frame size (N x N)
 SAVE_PATH = 'speednet.pth'  # location of model
 
 
-def training(optimizer, criterion, model, train_dl):
+def training(optimizer, criterion, model, train_dl, platf):
     """
     Training function
     :param optimizer: model optimizer
     :param criterion: model loss function
     :param model: actual model (S3DG)
     :param train_dl: train data loader
+    :param platf : data will be loaded on this platform
     :return: nothing
     """
     count = 0
@@ -55,10 +57,13 @@ def training(optimizer, criterion, model, train_dl):
         data = torch.reshape(data, (2, T, N, N, 3))
         data = torch.permute(data, [0, 4, 1, 2, 3])
         data = data.float()
+        data = data.to(platf)
+        video_labels = torch.tensor([[video_label_1], [video_label_2]])
+        video_labels = video_labels.to(platf)
         # predicting logits
         logits = model(data)
         # calculating loss and optimizing
-        loss = criterion(logits, torch.tensor([[video_label_1], [video_label_2]]))
+        loss = criterion(logits, video_labels)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -66,12 +71,13 @@ def training(optimizer, criterion, model, train_dl):
         # logits>0 --> class 1 (so logit>0, label=0 high loss; logit>0, label=1 low loss)
 
 
-def validating(criterion, model, valid_dl):
+def validating(criterion, model, valid_dl, platf):
     """
     Validation function
     :param criterion: loss function
     :param model: actual model (S3DG)
     :param valid_dl: validation data loader
+    :param platf : data will be loaded on this platform
     :return: nothing
     """
     # VALIDATION
@@ -91,8 +97,11 @@ def validating(criterion, model, valid_dl):
             data = torch.reshape(data, (1, T, N, N, 3))
             data = torch.permute(data, [0, 4, 1, 2, 3])
             data = data.float()
+            data = data.to(platf)
+            video_label = torch.tensor([[video_label]])
+            video_label = video_label.to(platf)
             logits = model(data)
-            val_loss += criterion(logits, torch.tensor([[video_label]])).item()
+            val_loss += criterion(logits, video_label).item()
             if torch.round(torch.sigmoid(logits)) == video_label:
                 correct += 1
                 val_count += 1
@@ -103,11 +112,12 @@ def validating(criterion, model, valid_dl):
     return val_loss, correct
 
 
-def testing(model, test_dl):
+def testing(model, test_dl, platf):
     """
     Test function
     :param model: actual model (S3DG)
     :param test_dl: test data loader
+    :param platf : data will be loaded on this platform
     :return: nothing
     """
     # RELOAD MODEL AND TEST
@@ -132,13 +142,9 @@ def testing(model, test_dl):
             data = torch.permute(data, [0, 4, 1, 2, 3])
             data = data.float()
             # predicting logits and converting into probability
+            data = data.to(platf)
             logits = model(data)
             manipulation_probability = torch.sigmoid(logits)
-            print(video_label)
-            print(logits)
-            print(manipulation_probability)  # probability that tested video belongs to class 1 (manipulated)
-            print(
-                torch.round(manipulation_probability))  # prints output predicted class (0 = original, 1 = manipulated)
             total = total + 1
             predictions_list.append(np.round(manipulation_probability[0].item()))
             test_labels.append(video_label)
@@ -150,9 +156,14 @@ def testing(model, test_dl):
 
 
 def main():
+    # GPU parameters
+    set_gpu(0)
+    set_backend()
+    set_seed()
+    platf = platform()
     # Model Parameters
     model = S3DG(num_classes=1, num_frames=T)
-    # model.load_state_dict(torch.load(SAVE_PATH))
+    model.to(platf)
     model.train()
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters())
@@ -169,9 +180,9 @@ def main():
     print("START TRANINING")
     for e in range(epochs):
         print("EPOCH "+str(e+1))
-        training(optimizer, criterion, model, train_dl)
+        training(optimizer, criterion, model, train_dl, platf)
         # VALIDATING
-        correct, val_loss = validating(criterion, model, valid_dl)
+        correct, val_loss = validating(criterion, model, valid_dl, platf)
         lr_scheduler.step(val_loss)
         model.train()
         history.append({"epoch": e, "loss": val_loss, "lr": optimizer.param_groups[0]['lr']})
@@ -209,7 +220,7 @@ def main():
     # model = S3DG(num_classes=1, num_frames=T)
     # model.load_state_dict(torch.load(SAVE_PATH))
     model.eval()
-    testing(model, test_dl)
+    testing(model, test_dl, platf)
 
 
 if __name__ == '__main__':
