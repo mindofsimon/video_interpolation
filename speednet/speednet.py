@@ -17,6 +17,7 @@ from s3dg_torch import S3DG
 from speednet_utils import *
 import pandas as pd
 from torch_utils import *
+from tqdm import tqdm
 
 
 # Input Parameters
@@ -36,14 +37,11 @@ def training(optimizer, criterion, model, train_dl, platf):
     :return: nothing
     """
 
-    count = 0
-    for batch in train_dl:
-        print("file "+str(count+1))
-        count += 1
+    for batch in tqdm(train_dl, total=len(train_dl.dataset), desc='training'):
         # getting files path and label (each batch will contain original and manipulated versions of same video)
         # video 1 is original (class=0.0)
         # video 2 is manipulated (class=1.0)
-        data, video_labels = train_data_processing(batch, T, N)
+        data, video_labels = train_data_processing(batch, N, T)
         data = data.to(platf)
         video_labels = video_labels.to(platf)
         # predicting logits
@@ -72,9 +70,8 @@ def validating(criterion, model, valid_dl, platf):
     correct = 0
     val_count = 0
     model.eval()
-    print("START VALIDATION")
     with torch.no_grad():
-        for batch in valid_dl:
+        for batch in tqdm(valid_dl, total=len(valid_dl.dataset), desc='validating'):
             data, video_label = test_val_data_processing(batch, N, T)
             data = data.to(platf)
             video_label = torch.tensor([[video_label]])
@@ -85,7 +82,6 @@ def validating(criterion, model, valid_dl, platf):
                 correct += 1
                 val_count += 1
 
-        print("END VALIDATION")
         val_loss /= 1
         correct /= val_count
     return val_loss, correct
@@ -107,9 +103,8 @@ def testing(model, test_dl, platf):
     test_labels = []
     predictions_list = []
 
-    print("START TESTING")
     with torch.no_grad():
-        for batch in test_dl:
+        for batch in tqdm(test_dl, total=len(test_dl.dataset), desc='testing'):
             # getting file path and label
             data, video_label = test_val_data_processing(batch, N, T)
             # predicting logits and converting into probability
@@ -121,7 +116,6 @@ def testing(model, test_dl, platf):
             test_labels.append(video_label)
             if torch.round(manipulation_probability) == video_label:
                 true_positives = true_positives + 1
-        print("END TESTING")
     # EVALUATION METRICS
     print_eval_metrics(test_labels, predictions_list, true_positives, total)
 
@@ -148,7 +142,7 @@ def main():
 
     # TRAINING
     train_dl, test_dl, valid_dl = load_data()
-    print("START TRANINING")
+    print("TRAINING SPEEDNET")
     for e in range(epochs):
         print("EPOCH "+str(e+1))
         training(optimizer, criterion, model, train_dl, platf)
@@ -187,6 +181,7 @@ def main():
     torch.save(model.state_dict(), SAVE_PATH)
 
     # TESTING
+    print("TESTING SPEEDNET")
     model.eval()
     testing(model, test_dl, platf)
 
