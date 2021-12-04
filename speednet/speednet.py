@@ -37,6 +37,7 @@ def training(optimizer, criterion, model, train_dl, platf):
     :return: nothing
     """
 
+    count = 1
     for batch in tqdm(train_dl, total=len(train_dl), desc='training'):
         # getting files path and label (each batch will contain original and manipulated versions of same video)
         # video 1 is original (class=0.0)
@@ -52,9 +53,6 @@ def training(optimizer, criterion, model, train_dl, platf):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if batch % 100 == 0:
-                loss, current = loss.item(), batch * len(data)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{len(train_dl.dataset):>5d}]")
             # logits<0 --> class 0 (so logit<0, label=0 low loss; logit<0, label=1 high loss)
             # logits>0 --> class 1 (so logit>0, label=0 high loss; logit>0, label=1 low loss)
 
@@ -72,6 +70,7 @@ def validating(criterion, model, valid_dl, platf):
     # VALIDATION
     val_loss = 0
     correct = 0
+    n_skipped = 0  # to count the number of skipped videos (due to low number of frames)
     model.eval()
     with torch.no_grad():
         for batch in tqdm(valid_dl, total=len(valid_dl), desc='validating'):
@@ -84,11 +83,12 @@ def validating(criterion, model, valid_dl, platf):
                 val_loss += criterion(logits, video_label).item()
                 if torch.round(torch.sigmoid(logits)) == video_label:
                     correct += 1
-
-        val_loss /= len(valid_dl)
-        correct /= len(valid_dl.dataset)
-        print(f"Validation Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {val_loss:>8f} \n")
-    return val_loss, correct
+            else:
+                n_skipped += 1
+        val_loss /= (len(valid_dl) - n_skipped)
+        correct /= (len(valid_dl.dataset) - n_skipped)
+        print(f"validation error: \n accuracy: {(100 * correct):>0.1f}%, avg loss: {val_loss:>8f}")
+    return correct, val_loss
 
 
 def testing(model, test_dl, platf):
