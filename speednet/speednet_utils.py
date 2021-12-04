@@ -24,8 +24,6 @@ def print_eval_metrics(test_labels, predictions_list, true_positives, total):
     :return: nothing
     """
     # printing confusion matrix and accuracy
-    print(test_labels)
-    print(predictions_list)
     conf_matrix = confusion_matrix(test_labels, predictions_list, labels=[0.0, 1.0])
     plt.figure(figsize=(10, 10), dpi=300)
     df_cm = pd.DataFrame(conf_matrix, index=["original", "modified"], columns=["original", "modified"])
@@ -193,19 +191,24 @@ def test_val_data_processing(batch, N, T):
     :param batch: batch containing video path, video label and video smp
     :param N: spatial dimension (frame size)
     :param T: temporal dimension (frame number)
-    :return: input to the model(data, with batch size = 1) and video label
+    :return: input to the model(data, with batch size = 1), video label and skip flag.
+             skip flag indicates if a file has less frames than the number used for training.
     """
-
+    data = None
+    skip_file = False
     video_path, video_label, _ = batch
     video_path = video_path[0]
     video_label = float(video_label[0])
     frames_list = preprocess_test_video(video_path, N, T)
-    frames_list = np.array([frames_list])
-    data = torch.autograd.Variable(torch.tensor(frames_list))
-    data = torch.reshape(data, (1, T, N, N, 3))
-    data = torch.permute(data, [0, 4, 1, 2, 3])
-    data = data.float()
-    return data, video_label
+    if len(frames_list) < T:
+        skip_file = True
+    else:
+        frames_list = np.array([frames_list])
+        data = torch.autograd.Variable(torch.tensor(frames_list))
+        data = torch.reshape(data, (1, T, N, N, 3))
+        data = torch.permute(data, [0, 4, 1, 2, 3])
+        data = data.float()
+    return data, video_label, skip_file
 
 
 def train_data_processing(batch, N, T):
@@ -214,21 +217,27 @@ def train_data_processing(batch, N, T):
     :param batch: batch containing video path, video label and video smp
     :param N: spatial dimension (frame size)
     :param T: temporal dimension (frame number)
-    :return: input to the model(data, with batch size = 2) and video labels
+    :return: input to the model(data, with batch size = 2), video labels, and skip flag.
+             skip flag indicates if a file has less frames than the number used for training.
     """
 
+    data = None
+    skip_file = False
     video_path, video_label, _ = batch
     video_path_1 = video_path[0]
     video_path_2 = video_path[1]
     video_label_1 = float(video_label[0])
     video_label_2 = float(video_label[1])
+    video_labels = torch.tensor([[video_label_1], [video_label_2]])
     # building input tensor
     frames_list_1 = preprocess_train_video(video_path_1, video_label_1, T, N)
     frames_list_2 = preprocess_train_video(video_path_2, video_label_2, T, N)
-    frames_list = np.array([frames_list_1, frames_list_2])
-    data = torch.autograd.Variable(torch.tensor(frames_list))
-    data = torch.reshape(data, (2, T, N, N, 3))
-    data = torch.permute(data, [0, 4, 1, 2, 3])
-    data = data.float()
-    video_labels = torch.tensor([[video_label_1], [video_label_2]])
-    return data, video_labels
+    if len(frames_list_1) < T or len(frames_list_2) < T:
+        skip_file = True
+    else:
+        frames_list = np.array([frames_list_1, frames_list_2])
+        data = torch.autograd.Variable(torch.tensor(frames_list))
+        data = torch.reshape(data, (2, T, N, N, 3))
+        data = torch.permute(data, [0, 4, 1, 2, 3])
+        data = data.float()
+    return data, video_labels, skip_file

@@ -4,7 +4,7 @@ It includes Training, Validation and Testing.
 The model takes as input a tensor of size [BATCH_SIZE, N_CHANNELS, N_FRAMES, HEIGHT, WIDTH].
 
 N_CHANNELS is always 3.
-N_FRAMES is set 32.
+N_FRAMES is set 64.
 HEIGHT and WIDTH are both set to 224 pixels.
 BATCH SIZE is 2 for training (we train with a double batch composed by an original video and its manipulated version) and 1 for test and validation.
 
@@ -21,7 +21,7 @@ from tqdm import tqdm
 
 
 # Input Parameters
-T = 32  # frame number
+T = 64  # frame number
 N = 224  # frame size (N x N)
 SAVE_PATH = 'speednet.pth'  # location of model
 
@@ -41,18 +41,19 @@ def training(optimizer, criterion, model, train_dl, platf):
         # getting files path and label (each batch will contain original and manipulated versions of same video)
         # video 1 is original (class=0.0)
         # video 2 is manipulated (class=1.0)
-        data, video_labels = train_data_processing(batch, N, T)
-        data = data.to(platf)
-        video_labels = video_labels.to(platf)
-        # predicting logits
-        logits = model(data)
-        # calculating loss and optimizing
-        loss = criterion(logits, video_labels)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        # logits<0 --> class 0 (so logit<0, label=0 low loss; logit<0, label=1 high loss)
-        # logits>0 --> class 1 (so logit>0, label=0 high loss; logit>0, label=1 low loss)
+        data, video_labels, skip = train_data_processing(batch, N, T)
+        if not skip:
+            data = data.to(platf)
+            video_labels = video_labels.to(platf)
+            # predicting logits
+            logits = model(data)
+            # calculating loss and optimizing
+            loss = criterion(logits, video_labels)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            # logits<0 --> class 0 (so logit<0, label=0 low loss; logit<0, label=1 high loss)
+            # logits>0 --> class 1 (so logit>0, label=0 high loss; logit>0, label=1 low loss)
 
 
 def validating(criterion, model, valid_dl, platf):
@@ -72,15 +73,16 @@ def validating(criterion, model, valid_dl, platf):
     model.eval()
     with torch.no_grad():
         for batch in tqdm(valid_dl, total=len(valid_dl), desc='validating'):
-            data, video_label = test_val_data_processing(batch, N, T)
-            data = data.to(platf)
-            video_label = torch.tensor([[video_label]])
-            video_label = video_label.to(platf)
-            logits = model(data)
-            val_loss += criterion(logits, video_label).item()
-            if torch.round(torch.sigmoid(logits)) == video_label:
-                correct += 1
-                val_count += 1
+            data, video_label, skip = test_val_data_processing(batch, N, T)
+            if not skip:
+                data = data.to(platf)
+                video_label = torch.tensor([[video_label]])
+                video_label = video_label.to(platf)
+                logits = model(data)
+                val_loss += criterion(logits, video_label).item()
+                if torch.round(torch.sigmoid(logits)) == video_label:
+                    correct += 1
+                    val_count += 1
 
         val_loss /= 1
         correct /= val_count
@@ -106,16 +108,17 @@ def testing(model, test_dl, platf):
     with torch.no_grad():
         for batch in tqdm(test_dl, total=len(test_dl), desc='testing'):
             # getting file path and label
-            data, video_label = test_val_data_processing(batch, N, T)
-            # predicting logits and converting into probability
-            data = data.to(platf)
-            logits = model(data)
-            manipulation_probability = torch.sigmoid(logits)
-            total = total + 1
-            predictions_list.append(np.round(manipulation_probability[0].item()))
-            test_labels.append(video_label)
-            if torch.round(manipulation_probability) == video_label:
-                true_positives = true_positives + 1
+            data, video_label, skip = test_val_data_processing(batch, N, T)
+            if not skip:
+                # predicting logits and converting into probability
+                data = data.to(platf)
+                logits = model(data)
+                manipulation_probability = torch.sigmoid(logits)
+                total = total + 1
+                predictions_list.append(np.round(manipulation_probability[0].item()))
+                test_labels.append(video_label)
+                if torch.round(manipulation_probability) == video_label:
+                    true_positives = true_positives + 1
     # EVALUATION METRICS
     print_eval_metrics(test_labels, predictions_list, true_positives, total)
 
@@ -180,7 +183,7 @@ def main():
     # SAVING TRAINED MODEL
     torch.save(model.state_dict(), SAVE_PATH)
 
-    # TESTING (here is still on 32 frames, in speednet_test.py is on 16 frames)
+    # TESTING (here is still on 64 frames, in speednet_test.py is on 16 frames)
     print("TESTING SPEEDNET")
     model.eval()
     testing(model, test_dl, platf)
