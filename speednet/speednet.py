@@ -71,7 +71,6 @@ def validating(criterion, model, valid_dl, platf):
     val_loss = 0
     correct = 0
     n_skipped = 0  # to count the number of skipped videos (due to low number of frames)
-    model.eval()
     with torch.no_grad():
         for batch in tqdm(valid_dl, total=len(valid_dl), desc='validating'):
             data, video_label, skip = test_val_data_processing(batch, N, T)
@@ -150,11 +149,12 @@ def main():
     print("TRAINING SPEEDNET")
     for e in range(epochs):
         print("EPOCH "+str(e+1))
+        model.train()
         training(optimizer, criterion, model, train_dl, platf)
         # VALIDATING
+        model.eval()
         correct, val_loss = validating(criterion, model, valid_dl, platf)
         lr_scheduler.step(val_loss)
-        model.train()
         history.append({"epoch": e, "loss": val_loss, "lr": optimizer.param_groups[0]['lr']})
         # MODEL CHECKPOINT CALLBACK
         accuracy = correct
