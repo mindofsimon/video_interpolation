@@ -51,18 +51,18 @@ def load_data():
     """
 
     # train ds
-    originals_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/train.csv'
-    dataset = VideoDataset(originals_csv)
+    videos_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/train.csv'
+    dataset = VideoDataset(videos_csv)
     train_data_loader = DataLoader(dataset, batch_size=2, shuffle=False, num_workers=2)
 
     # test ds
-    originals_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/test.csv'
-    test_dataset = VideoDataset(originals_csv)
+    videos_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/test.csv'
+    test_dataset = VideoDataset(videos_csv)
     test_data_loader = DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=2)
 
     # valid ds
-    originals_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/validation.csv'
-    valid_dataset = VideoDataset(originals_csv)
+    videos_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/validation.csv'
+    valid_dataset = VideoDataset(videos_csv)
     valid_data_loader = DataLoader(valid_dataset, batch_size=1, shuffle=True, num_workers=2)
 
     return train_data_loader, test_data_loader, valid_data_loader
