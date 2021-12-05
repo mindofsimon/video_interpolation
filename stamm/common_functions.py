@@ -13,6 +13,33 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sn
 import pandas as pd
 import matplotlib.pyplot as plt
+from load_data import VideoDataset
+from torch.utils.data import DataLoader
+
+
+def load_data():
+    """
+    Loading data from csv files (path, label, speed manipulation parameter) to VideoDataset class.
+    Then from VideoDataset class into DataLoaders.
+
+    All videos (train/test) are loaded in single batch.
+
+    Be careful to put in originals csv the path to the video info csv files!
+
+    :return: two data loaders (one for train videos and one for test videos).
+    """
+
+    # train ds
+    videos_csv = '/nas/home/smariani/video_interpolation/datasets/dfdc/partition35/train/train.csv'
+    dataset = VideoDataset(videos_csv)
+    train_data_loader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=2)
+
+    # test ds
+    videos_csv = '/nas/home/smariani/video_interpolation/datasets/dfdc/partition35/test/test.csv'
+    test_dataset = VideoDataset(videos_csv)
+    test_data_loader = DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=2)
+
+    return train_data_loader, test_data_loader
 
 
 def print_regression_evaluation_metrics(y_test_re, predictions):
@@ -240,3 +267,49 @@ def read_json_file():
     file.close()
     os.remove('data.json')
     return f_size_list, f_type_list, c_list
+
+
+def extract_classification_features(batch):
+    """
+    Extracting coefficients (features) and label from a video (contained in batch: path, label, smp)
+    :param batch: batch containing: video path, video label (0: original, 1: manipulated), video smp (speed manipulation parameter).
+                  if video is original, smp is set to 1.
+    :return: coefficients (features representing the video) and video label
+    """
+
+    video_path, video_label, _ = batch
+
+    # CREATING JSON FILES AND POPULATING LISTS
+    create_json_file(video_path)
+    frame_size_list, frame_type_list, color_list = read_json_file()
+
+    # DECOMPOSING EFS TO FIND RESIDUALS
+    residuals = efs_processing(frame_size_list, frame_type_list)
+
+    # AUTOREGRESSIVE MODEL
+    coefficients = build_ar_model(residuals)
+
+    return coefficients, video_label
+
+
+def extract_regression_features(batch):
+    """
+        Extracting coefficients (features) and smp from a video (contained in batch: path, label, smp)
+        :param batch: batch containing: video path, video label (0: original, 1: manipulated), video smp (speed manipulation parameter).
+                      if video is original, smp is set to 1.
+        :return: coefficients (features representing the video) and video smp
+        """
+
+    video_path, _, video_smp = batch
+
+    # CREATING JSON FILES AND POPULATING LISTS
+    create_json_file(video_path)
+    frame_size_list, frame_type_list, color_list = read_json_file()
+
+    # DECOMPOSING EFS TO FIND RESIDUALS
+    residuals = efs_processing(frame_size_list, frame_type_list)
+
+    # AUTOREGRESSIVE MODEL
+    coefficients = build_ar_model(residuals)
+
+    return coefficients, video_smp

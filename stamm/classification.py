@@ -10,12 +10,11 @@ Needs common_functions.py to implement all the fundamental processing functions.
 from sklearn import svm
 import pickle
 from common_functions import *  # function used both by classification and regression scripts
-import csv
 from sklearn.model_selection import KFold
 from sklearn.model_selection import cross_val_score
+from tqdm import tqdm
 
 
-# MAIN PROGRAM
 frame_size_list = []  # frame sizes
 frame_type_list = []  # frame types
 color_list = []  # useful just for plotting efs
@@ -26,48 +25,25 @@ y_test_cl = []  # testing labels for binary classification (speed manipulation d
 coefficients = []  # coefficients of the ar model modeling the residual sequence
 label_list = []  # list of video labels
 
+# LOADING DATA
+train_dl, test_dl = load_data()
 
-# in csv_train_path put the path of the csv file containing training video informations
-csv_train_path = '/nas/home/smariani/video_interpolation/stamm/train.csv'
-with open(csv_train_path, 'r') as videos:
-    data = csv.reader(videos, delimiter=',')
-    for row in data:
-        video_path = row[0]
-        video_label = row[1]
-
-        # CREATING JSON FILES AND POPULATING LISTS
-        create_json_file(video_path)
-        frame_size_list, frame_type_list, color_list = read_json_file()
-
-        # DECOMPOSING EFS TO FIND RESIDUALS
-        residuals = efs_processing(frame_size_list, frame_type_list)
-
-        # AUTOREGRESSIVE MODEL
-        coefficients.append(build_ar_model(residuals))
-        label_list.append(video_label)
+# TRAIN FEATURES EXTRACTION
+for batch in tqdm(train_dl, total=len(train_dl.dataset), desc='train features extraction'):
+    coeffs, label = extract_classification_features(batch)
+    coefficients.append(coeffs)
+    label_list.append(label)
 
 x_train = coefficients
 y_train_cl = label_list
 coefficients = []
 label_list = []
 
-# in csv_test_path put the path of the csv file containing testing video informations
-csv_test_path = '/nas/home/smariani/video_interpolation/stamm/test.csv'
-with open(csv_test_path, 'r') as videos:
-    data = csv.reader(videos, delimiter=',')
-    for row in data:
-        video_path = row[0]
-        video_label = row[1]
-        # CREATING JSON FILES AND POPULATING LISTS
-        create_json_file(video_path)
-        frame_size_list, frame_type_list, color_list = read_json_file()
-
-        # DECOMPOSING EFS TO FIND RESIDUALS
-        residuals = efs_processing(frame_size_list, frame_type_list)
-
-        # AUTOREGRESSIVE MODEL
-        coefficients.append(build_ar_model(residuals))
-        label_list.append(video_label)
+# TEST FEATURES EXTRACTION
+for batch in tqdm(test_dl, total=len(test_dl.dataset), desc='test features extraction'):
+    coeffs, label = extract_classification_features(batch)
+    coefficients.append(coeffs)
+    label_list.append(label)
 
 x_test = coefficients
 y_test_cl = label_list
@@ -91,7 +67,6 @@ pickle.dump(classifier, open(model_name, 'wb'))
 predictions = classifier.predict(x_test)
 
 # EVALUATION METRICS
-# function receives real test labels and predictions
 print_classification_evaluation_metrics(y_test_cl, predictions)
 cv = KFold(n_splits=10, random_state=1, shuffle=True)
 scores = cross_val_score(classifier, x, y_cl, scoring='accuracy', cv=cv, n_jobs=-1)

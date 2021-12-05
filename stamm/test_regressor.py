@@ -5,31 +5,22 @@ Loading model regressor.sav.
 
 import pickle
 from common_functions import *
-import csv
+from tqdm import tqdm
 
 
+# LOADING MODEL
 regressor = pickle.load(open('regressor.sav', 'rb'))
 coefficients = []
 smp_list = []
 
-# in csv_test_path put the path of the csv file containing testing video informations
-csv_test_path = '/nas/home/smariani/video_interpolation/stamm/test.csv'
-with open(csv_test_path, 'r') as videos:
-    data = csv.reader(videos, delimiter=',')
-    for row in data:
-        video_path = row[0]
-        video_label = row[1]
-        video_smp = row[2]
-        # CREATING JSON FILES AND POPULATING LISTS
-        create_json_file(video_path)
-        frame_size_list, frame_type_list, color_list = read_json_file()
+# LOADING DATA
+_, test_dl = load_data()
 
-        # DECOMPOSING EFS TO FIND RESIDUALS
-        residuals = efs_processing(frame_size_list, frame_type_list)
-
-        # AUTOREGRESSIVE MODEL
-        coefficients.append(build_ar_model(residuals))
-        smp_list.append(video_smp)
+# TEST FEATURES EXTRACTION
+for batch in tqdm(test_dl, total=len(test_dl.dataset), desc='test features extraction'):
+    coeffs, smp = extract_regression_features(batch)
+    coefficients.append(coeffs)
+    smp_list.append(smp)
 
 x_test = coefficients
 y_test_re = smp_list
@@ -38,5 +29,4 @@ y_test_re = smp_list
 predictions = regressor.predict(x_test)
 
 # EVALUATION METRICS
-# function receives real test labels and predictions
 print_regression_evaluation_metrics(y_test_re, predictions)

@@ -10,12 +10,11 @@ Needs common_functions.py to implement all the fundamental processing functions.
 from sklearn.svm import SVR
 import pickle
 from common_functions import *  # function used both by classification and regression scripts
-import csv
 from sklearn.model_selection import cross_val_predict
 from sklearn.model_selection import KFold
+from tqdm import tqdm
 
 
-# MAIN PROGRAM
 frame_size_list = []  # frame sizes
 frame_type_list = []  # frame types
 color_list = []  # useful just for plotting efs
@@ -26,49 +25,26 @@ y_test_re = []  # testing labels for regression (speed manipulation parameter es
 coefficients = []  # coefficients of the ar model modeling the residual sequence
 smp_list = []  # speed manipulation parameters of the videos
 
-# **************************REGRESSION**************************
-# in csv_train_path put the path of the csv file containing training video informations
-csv_train_path = '/nas/home/smariani/video_interpolation/stamm/train.csv'
-with open(csv_train_path, 'r') as videos:
-    data = csv.reader(videos, delimiter=',')
-    for row in data:
-        video_path = row[0]
-        video_label = row[1]
-        video_smp = row[2]
-        # CREATING JSON FILES AND POPULATING LISTS
-        create_json_file(video_path)
-        frame_size_list, frame_type_list, color_list = read_json_file()
 
-        # DECOMPOSING EFS TO FIND RESIDUALS
-        residuals = efs_processing(frame_size_list, frame_type_list)
+# LOADING DATA
+train_dl, test_dl = load_data()
 
-        # AUTOREGRESSIVE MODEL
-        coefficients.append(build_ar_model(residuals))
-        smp_list.append(video_smp)
+# TRAIN FEATURES EXTRACTION
+for batch in tqdm(train_dl, total=len(train_dl.dataset), desc='train features extraction'):
+    coeffs, smp = extract_regression_features(batch)
+    coefficients.append(coeffs)
+    smp_list.append(smp)
 
 x_train = coefficients
 y_train_re = smp_list
 coefficients = []
 smp_list = []
 
-# in csv_test_path put the path of the csv file containing testing video informations
-csv_test_path = '/nas/home/smariani/video_interpolation/stamm/test.csv'
-with open(csv_test_path, 'r') as videos:
-    data = csv.reader(videos, delimiter=',')
-    for row in data:
-        video_path = row[0]
-        video_label = row[1]
-        video_smp = row[2]
-        # CREATING JSON FILES AND POPULATING LISTS
-        create_json_file(video_path)
-        frame_size_list, frame_type_list, color_list = read_json_file()
-
-        # DECOMPOSING EFS TO FIND RESIDUALS
-        residuals = efs_processing(frame_size_list, frame_type_list)
-
-        # AUTOREGRESSIVE MODEL
-        coefficients.append(build_ar_model(residuals))
-        smp_list.append(video_smp)
+# TEST FEATURES EXTRACTION
+for batch in tqdm(test_dl, total=len(test_dl.dataset), desc='test features extraction'):
+    coeffs, smp = extract_regression_features(batch)
+    coefficients.append(coeffs)
+    smp_list.append(smp)
 
 x_test = coefficients
 y_test_re = smp_list
@@ -94,7 +70,6 @@ pickle.dump(regressor, open(model_name, 'wb'))
 predictions = regressor.predict(x_test)
 
 # EVALUATION METRICS
-# function receives real test labels and predictions
 print_regression_evaluation_metrics(y_test_re, predictions)
 cv = KFold(n_splits=10, random_state=1, shuffle=True)
 cv_predictions = cross_val_predict(regressor, x, y_re, cv=cv, n_jobs=-1)
