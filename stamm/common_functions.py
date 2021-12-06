@@ -278,6 +278,8 @@ def extract_classification_features(batch):
     """
 
     video_path, video_label, _ = batch
+    video_path = video_path[0]
+    video_label = video_label[0]
 
     # CREATING JSON FILES AND POPULATING LISTS
     create_json_file(video_path)
@@ -301,6 +303,8 @@ def extract_regression_features(batch):
         """
 
     video_path, _, video_smp = batch
+    video_path = video_path[0]
+    video_smp = video_smp[0]
 
     # CREATING JSON FILES AND POPULATING LISTS
     create_json_file(video_path)
