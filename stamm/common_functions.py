@@ -15,6 +15,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from load_data import VideoDataset
 from torch.utils.data import DataLoader
+import warnings
 
 
 def load_data():
@@ -144,6 +145,7 @@ def median_filtering(i_frames, b_frames, p_frames):
     :param p_frames: P frames sequence
     :return: the three median filtered sequences
     """
+    warnings.filterwarnings("ignore", message="kernel_size exceeds volume extent")  # ignoring a useless medfilt warning
     med_i_frames = scipy.signal.medfilt(i_frames)
     med_b_frames = scipy.signal.medfilt(b_frames)
     med_p_frames = scipy.signal.medfilt(p_frames)
