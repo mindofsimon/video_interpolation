@@ -57,8 +57,8 @@ y_cl = y_train_cl + y_test_cl
 classifier = svm.SVC(kernel='rbf')
 
 # TRAINING SVM
-classifier.fit(x_train, y_train_cl)
 print("FITTING THE MODEL...")
+classifier.fit(x_train, y_train_cl)
 
 # SAVING MODEL
 model_name = "classifier_15.sav"

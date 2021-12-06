@@ -60,8 +60,8 @@ y_re = y_train_re + y_test_re
 regressor = SVR(kernel='rbf')
 
 # TRAINING SVR
+print("FITTING THE MODEL...")
 regressor.fit(x_train, y_train_re)
-print("FITTING THE MODEL")
 
 # SAVING MODEL
 model_name = "regressor.sav"
