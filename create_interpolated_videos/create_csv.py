@@ -10,32 +10,32 @@ import csv
 import os
 
 
-# FOR SPEEDNET (KINETICS400 VIDEOS)
-smp = 2
+# FOR STAMM (DFDC VIDEOS)
+smp = 15  # useless for classification (only needed in regression)
 
 # TEST
-originals_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/originals/'
-manipulated_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/2x/'
-with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/test.csv', mode='w', newline="") as videos:
+originals_root = '/nas/home/smariani/video_interpolation/datasets/dfdc/partition35/test/originals/'
+manipulated_root = '/nas/home/smariani/video_interpolation/datasets/dfdc/partition35/test/15fps_minterpolate/'
+with open('/nas/home/smariani/video_interpolation/datasets/dfdc/partition35/test/test.csv', mode='w', newline="") as videos:
     videos_writer = csv.writer(videos, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     for v in os.listdir(originals_root):
         videos_writer.writerow([originals_root + v, "0", "1"])
         videos_writer.writerow([manipulated_root + v, "1", smp])
 
 # TRAIN
-originals_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/originals/'
-manipulated_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/2x/'
-with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/train.csv', mode='w', newline="") as videos:
+originals_root = '/nas/home/smariani/video_interpolation/datasets/dfdc/partition35/train/originals/'
+manipulated_root = '/nas/home/smariani/video_interpolation/datasets/dfdc/partition35/train/15fps_minterpolate/'
+with open('/nas/home/smariani/video_interpolation/datasets/dfdc/partition35/train/train.csv', mode='w', newline="") as videos:
     videos_writer = csv.writer(videos, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     for v in os.listdir(originals_root):
         videos_writer.writerow([originals_root + v, "0", "1"])
         videos_writer.writerow([manipulated_root + v, "1", smp])
 
 # VALIDATION
-originals_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/originals/'
-manipulated_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/2x/'
-with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/validation.csv', mode='w', newline="") as videos:
-    videos_writer = csv.writer(videos, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    for v in os.listdir(originals_root):
-        videos_writer.writerow([originals_root + v, "0", "1"])
-        videos_writer.writerow([manipulated_root + v, "1", smp])
+# originals_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/originals/'
+# manipulated_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/2x/'
+# with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/validation.csv', mode='w', newline="") as videos:
+    # videos_writer = csv.writer(videos, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    # for v in os.listdir(originals_root):
+        # videos_writer.writerow([originals_root + v, "0", "1"])
+        # videos_writer.writerow([manipulated_root + v, "1", smp])
