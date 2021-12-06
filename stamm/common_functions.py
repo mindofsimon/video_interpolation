@@ -73,11 +73,11 @@ def print_classification_evaluation_metrics(y_test_cl, predictions):
     sn.heatmap(df_cm, annot=True, annot_kws={"size": 16})
     plt.xlabel("Predicted Labels")
     plt.ylabel("True Labels")
-    plt.title("Confusion Matrix (GLOBAL CLASSIFICATION)")
+    plt.title("Confusion Matrix (CLASSIFICATION)")
     plt.savefig("cm_classification.png")
     plt.show()
     accuracy = (tp + tn) / (tp + tn + fp + fn)
-    print("\n*********************GLOBAL CLASSIFICATION*********************")
+    print("\n*********************CLASSIFICATION*********************")
     print("Classification Accuracy (NO CV): " + str(round(accuracy * 100, 3)) + "%")
 
 

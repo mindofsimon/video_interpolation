@@ -28,6 +28,7 @@ label_list = []  # list of video labels
 # LOADING DATA
 train_dl, test_dl = load_data()
 
+print("FEATURE EXTRACTION")
 # TRAIN FEATURES EXTRACTION
 for batch in tqdm(train_dl, total=len(train_dl.dataset), desc='train features extraction'):
     coeffs, label = extract_classification_features(batch)
@@ -57,6 +58,7 @@ classifier = svm.SVC(kernel='rbf')
 
 # TRAINING SVM
 classifier.fit(x_train, y_train_cl)
+print("FITTING THE MODEL...")
 
 # SAVING MODEL
 model_name = "classifier_15.sav"

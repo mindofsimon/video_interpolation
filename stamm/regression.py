@@ -30,6 +30,7 @@ smp_list = []  # speed manipulation parameters of the videos
 train_dl, test_dl = load_data()
 
 # TRAIN FEATURES EXTRACTION
+print("FEATURE EXTRACTION")
 for batch in tqdm(train_dl, total=len(train_dl.dataset), desc='train features extraction'):
     coeffs, smp = extract_regression_features(batch)
     coefficients.append(coeffs)
@@ -60,6 +61,7 @@ regressor = SVR(kernel='rbf')
 
 # TRAINING SVR
 regressor.fit(x_train, y_train_re)
+print("FITTING THE MODEL")
 
 # SAVING MODEL
 model_name = "regressor.sav"

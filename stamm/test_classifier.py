@@ -18,6 +18,7 @@ label_list = []
 _, test_dl = load_data()
 
 # TEST FEATURES EXTRACTION
+print("FEATURE EXTRACTION")
 for batch in tqdm(test_dl, total=len(test_dl.dataset), desc='test features extraction'):
     coeffs, label = extract_classification_features(batch)
     coefficients.append(coeffs)

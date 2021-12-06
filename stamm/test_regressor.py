@@ -17,6 +17,7 @@ smp_list = []
 _, test_dl = load_data()
 
 # TEST FEATURES EXTRACTION
+print("FEATURE EXTRACTION")
 for batch in tqdm(test_dl, total=len(test_dl.dataset), desc='test features extraction'):
     coeffs, smp = extract_regression_features(batch)
     coefficients.append(coeffs)
