@@ -59,7 +59,7 @@ classifier = svm.SVC(kernel='rbf')
 classifier.fit(x_train, y_train_cl)
 
 # SAVING MODEL
-model_name = "classifier.sav"
+model_name = "classifier_15.sav"
 remove_previous_file(model_name)
 pickle.dump(classifier, open(model_name, 'wb'))
 
