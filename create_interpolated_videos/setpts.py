@@ -7,6 +7,7 @@ This filter keeps the same frame rate between input and output videos, it just a
 
 import ffmpeg
 import os.path
+from tqdm import tqdm
 
 
 def generate_video(path, par, out_root):
@@ -24,6 +25,7 @@ def generate_video(path, par, out_root):
             .input(path)
             .filter('setpts', str(factor)+'*PTS')
             .output(out_root+filename)
+            .global_args('-loglevel', 'quiet')  # just not to print ffmpeg header
             .run()
     )
 
@@ -31,5 +33,5 @@ def generate_video(path, par, out_root):
 smp = 2  # speed manipulation parameter (2 means doubling speed)
 root = '/'  # video root folder
 output_root = root+"output/"  # video output root
-for video in os.listdir(root):
+for video in tqdm(os.listdir(root), total=len(os.listdir(root)), desc='generating videos'):
     generate_video(root+video, smp, output_root)
