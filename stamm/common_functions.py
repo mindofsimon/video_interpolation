@@ -6,7 +6,6 @@ Some others are just utils, like rounding decimals or printing output scores.
 
 import json
 import numpy as np
-import os
 import scipy.signal
 from statsmodels.tsa.ar_model import AutoReg
 from sklearn.metrics import confusion_matrix
@@ -16,6 +15,8 @@ import matplotlib.pyplot as plt
 from load_data import VideoDataset
 from torch.utils.data import DataLoader
 import warnings
+import ffmpy
+import subprocess
 
 
 def load_data():
@@ -79,16 +80,6 @@ def print_classification_evaluation_metrics(y_test_cl, predictions):
     accuracy = (tp + tn) / (tp + tn + fp + fn)
     print("\n*********************CLASSIFICATION*********************")
     print("Classification Accuracy (NO CV): " + str(round(accuracy * 100, 3)) + "%")
-
-
-def remove_previous_file(filename):
-    """
-    Remove specified file
-    :param filename: file to remove
-    :return: nothing
-    """
-    if filename in os.listdir():
-        os.remove(filename)
 
 
 def cut_list_decimals(number_list):
@@ -232,17 +223,7 @@ def get_frame_type_lists(type_list, size_list):
     return i_list, i_mapping_list, b_list, b_mapping_list, p_list, p_mapping_list
 
 
-def create_json_file(vid):
-    """
-    Creates data.json containing video informations.
-    :param vid: input video
-    :return: json file (data.json) containing informations about video frames (frame size, frame type)
-    """
-    remove_previous_file('data.json')
-    os.system('ffprobe -v error -hide_banner -of default=noprint_wrappers=0 -print_format json -select_streams v:0 -show_entries frame=pict_type,pkt_size ' + vid + ' > data.json')
-
-
-def read_json_file():
+def extract_frames_info(video_path):
     """
     Reads data.json and creates python lists containing video informations.
     :return: three lists scanning the json file (data.json) created for a video
@@ -253,9 +234,19 @@ def read_json_file():
     f_size_list = []   # to be filled with frame sizes in bytes
     f_type_list = []   # to be filled with frame types (I/B/P)
     c_list = []   # just for graphical reasons (I=green/B=red/P=orange)
-    file = open('data.json')
-    data = json.load(file)
-    for frame in data['frames']:
+
+    # ffprobe command
+    out = ffmpy.FFprobe(
+        inputs={video_path: None},
+        global_options=[
+            '-v', 'quiet',
+            '-print_format', 'json',
+            '-select_streams', 'v:0',
+            '-show_entries', 'frame=pict_type,pkt_size']
+    ).run(stdout=subprocess.PIPE)
+
+    command_out = json.loads(out[0].decode('utf-8'))
+    for frame in command_out['frames']:
         f_size_list.append(int(frame['pkt_size']))
         f_type_list.append(frame['pict_type'])
         if frame['pict_type'] == 'I':
@@ -266,8 +257,6 @@ def read_json_file():
             else:
                 c_list.append('orange')
 
-    file.close()
-    os.remove('data.json')
     return f_size_list, f_type_list, c_list
 
 
@@ -284,8 +273,7 @@ def extract_classification_features(batch):
     video_label = video_label[0]
 
     # CREATING JSON FILES AND POPULATING LISTS
-    create_json_file(video_path)
-    frame_size_list, frame_type_list, color_list = read_json_file()
+    frame_size_list, frame_type_list, color_list = extract_frames_info(video_path)
 
     # DECOMPOSING EFS TO FIND RESIDUALS
     residuals = efs_processing(frame_size_list, frame_type_list)
@@ -309,8 +297,7 @@ def extract_regression_features(batch):
     video_smp = video_smp[0]
 
     # CREATING JSON FILES AND POPULATING LISTS
-    create_json_file(video_path)
-    frame_size_list, frame_type_list, color_list = read_json_file()
+    frame_size_list, frame_type_list, color_list = extract_frames_info(video_path)
 
     # DECOMPOSING EFS TO FIND RESIDUALS
     residuals = efs_processing(frame_size_list, frame_type_list)
