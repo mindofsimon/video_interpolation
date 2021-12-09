@@ -225,7 +225,7 @@ def get_frame_type_lists(type_list, size_list):
 
 def extract_frames_info(video_path):
     """
-    Reads data.json and creates python lists containing video informations.
+    Runs ffprobe command (through ffmpy wrapper) and creates python lists containing video informations.
     :return: three lists scanning the json file (data.json) created for a video
              the lists are frame size, frame type and frame color.
              In the frame color one a color(Green/Red/Orange) is assigned
@@ -272,7 +272,7 @@ def extract_classification_features(batch):
     video_path = video_path[0]
     video_label = video_label[0]
 
-    # CREATING JSON FILES AND POPULATING LISTS
+    # EXTRACTING FRAMES INFORMATION
     frame_size_list, frame_type_list, color_list = extract_frames_info(video_path)
 
     # DECOMPOSING EFS TO FIND RESIDUALS
@@ -296,7 +296,7 @@ def extract_regression_features(batch):
     video_path = video_path[0]
     video_smp = video_smp[0]
 
-    # CREATING JSON FILES AND POPULATING LISTS
+    # EXTRACTING FRAMES INFORMATION
     frame_size_list, frame_type_list, color_list = extract_frames_info(video_path)
 
     # DECOMPOSING EFS TO FIND RESIDUALS
