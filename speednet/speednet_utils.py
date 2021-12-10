@@ -3,6 +3,7 @@ Utils for SpeedNet.
 Including preprocessing steps for training/test/validation, data loading and output metrics.
 """
 
+import random
 import cv2
 from torch.utils.data import DataLoader
 from load_data import VideoDataset
@@ -75,9 +76,7 @@ def center_crop(image):
     :return: cropped frame
     """
 
-    center = []
-    center.append(image.shape[0] / 2)
-    center.append(image.shape[1] / 2)
+    center = [image.shape[0] / 2, image.shape[1] / 2]
     h = image.shape[0]
     w = 224
     x = int(center[1]) - int(w / 2)
@@ -97,7 +96,6 @@ def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
     :return: resized image
     """
 
-    dim = None
     (h, w) = image.shape[:2]
 
     # if both the width and height are None, then return the
@@ -126,14 +124,14 @@ def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
     return resized
 
 
-def preprocess_train_video(vid, state, T, N):
+def preprocess_train_video(vid, state, t, n):
     """
     Preprocessing operations applied to train videos.
     Spatial and temporal augmentations are applied.
     :param vid: input video
     :param state: 0 if video is original, 1 if video is manipulated
-    :param T: temporal dimension (number of consecutive frames to take)
-    :param N: spatial dimension (224)
+    :param t: temporal dimension (number of consecutive frames to take)
+    :param n: spatial dimension (224)
     :return: list of T consecutive preprocessed frames
     """
 
@@ -142,31 +140,31 @@ def preprocess_train_video(vid, state, T, N):
     success, frame = cap.read()
     while success:
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame_rgb = cv2.resize(frame_rgb, dsize=(N, N), interpolation=cv2.INTER_NEAREST)  # spatial augmentation
+        frame_rgb = cv2.resize(frame_rgb, dsize=(n, n), interpolation=cv2.INTER_NEAREST)  # spatial augmentation
         f_list.append(frame_rgb/255)
         success, frame = cap.read()
 
-    if len(f_list) > (3*T):  # a video could have less than 3*T frames! (and also than T frames!)
-        f_list = f_list[0:(3 * T)]
+    if len(f_list) > (3*t):  # a video could have less than 3*T frames! (and also than T frames!)
+        f_list = f_list[0:(3 * t)]
 
     if state == 1.0:  # sped up video
         f_list = f_list[::2]  # temporal augmentation (2 is for 2x speed videos!)
         # for the original videos we do nothing (like ::1)
 
-    f_list = f_list[0:T]  # taking only T frames
+    f_list = f_list[0:t]  # taking only T frames
     return f_list
 
 
-def preprocess_test_video(vid, N, T):
+def preprocess_test_video(vid, n, t):
     """
     Preprocessing operations applied to test and validation videos.
     No spatial and temporal augmentations.
     Image is resized to 224 pixels on the height maintaining ratio.
     Center cropping 224x224 is then applied.
     :param vid: input video
-    :param N: spatial dimension (224)
-    :param T: temporal dimension (number of consecutive frames to take)
-    :return: list of T consecutive preprocessed frames
+    :param n: spatial dimension (224)
+    :param t: temporal dimension (number of consecutive frames to take)
+    :return: list of t consecutive preprocessed frames
     """
 
     f_list = []
@@ -174,23 +172,23 @@ def preprocess_test_video(vid, N, T):
     success, frame = cap.read()
     while success:
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        res_frame_rgb = image_resize(frame_rgb, height=N)
-        if res_frame_rgb.shape[1] < N:  # in case width is lower than 224 pixels, we resize it to 224
-            res_frame_rgb = cv2.resize(res_frame_rgb, dsize=(N, N), interpolation=cv2.INTER_NEAREST)
+        res_frame_rgb = image_resize(frame_rgb, height=n)
+        if res_frame_rgb.shape[1] < n:  # in case width is lower than 224 pixels, we resize it to 224
+            res_frame_rgb = cv2.resize(res_frame_rgb, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
         crop_frame_rgb = center_crop(res_frame_rgb)
         f_list.append(crop_frame_rgb/255)
         success, frame = cap.read()
 
-    f_list = f_list[0:T]  # taking only T frames
+    f_list = f_list[0:t]  # taking only T frames
     return f_list
 
 
-def test_val_data_processing(batch, N, T):
+def test_val_data_processing(batch, n, t):
     """
     Data processing chain for test and validation videos.
     :param batch: batch containing video path, video label and video smp
-    :param N: spatial dimension (frame size)
-    :param T: temporal dimension (frame number)
+    :param n: spatial dimension (frame size)
+    :param t: temporal dimension (frame number)
     :return: input to the model(data, with batch size = 1), video label and skip flag.
              skip flag indicates if a file has less frames than the number used for training.
     """
@@ -199,24 +197,23 @@ def test_val_data_processing(batch, N, T):
     video_path, video_label, _ = batch
     video_path = video_path[0]
     video_label = float(video_label[0])
-    frames_list = preprocess_test_video(video_path, N, T)
-    if len(frames_list) < T:
+    frames_list = preprocess_test_video(video_path, n, t)
+    if len(frames_list) < t:
         skip_file = True
     else:
         frames_list = np.array([frames_list])
         data = torch.autograd.Variable(torch.tensor(frames_list))
-        data = torch.reshape(data, (1, T, N, N, 3))
+        data = torch.reshape(data, (1, t, n, n, 3))
         data = torch.permute(data, [0, 4, 1, 2, 3])
         data = data.float()
     return data, video_label, skip_file
 
 
-def train_data_processing(batch, N, T):
+def train_data_processing(batch, t):
     """
     Data processing chain for train videos.
     :param batch: batch containing video path, video label and video smp
-    :param N: spatial dimension (frame size)
-    :param T: temporal dimension (frame number)
+    :param t: temporal dimension (frame number)
     :return: input to the model(data, with batch size = 2), video labels, and skip flag.
              skip flag indicates if a file has less frames than the number used for training.
     """
@@ -230,14 +227,15 @@ def train_data_processing(batch, N, T):
     video_label_2 = float(video_label[1])
     video_labels = torch.tensor([[video_label_1], [video_label_2]])
     # building input tensor
-    frames_list_1 = preprocess_train_video(video_path_1, video_label_1, T, N)
-    frames_list_2 = preprocess_train_video(video_path_2, video_label_2, T, N)
-    if len(frames_list_1) < T or len(frames_list_2) < T:
+    n = random.randrange(64, 336)
+    frames_list_1 = preprocess_train_video(video_path_1, video_label_1, t, n)
+    frames_list_2 = preprocess_train_video(video_path_2, video_label_2, t, n)
+    if len(frames_list_1) < t or len(frames_list_2) < t:
         skip_file = True
     else:
         frames_list = np.array([frames_list_1, frames_list_2])
         data = torch.autograd.Variable(torch.tensor(frames_list))
-        data = torch.reshape(data, (2, T, N, N, 3))
+        data = torch.reshape(data, (2, t, n, n, 3))
         data = torch.permute(data, [0, 4, 1, 2, 3])
         data = data.float()
     return data, video_labels, skip_file

@@ -1,11 +1,13 @@
 """
 Complete SpeedNet implementation.
 It includes Training, Validation and Testing.
-The model takes as input a tensor of size [BATCH_SIZE, N_CHANNELS, N_FRAMES, HEIGHT, WIDTH].
+The model takes as input a tensor of size [BATCH_SIZE, N_CHANNELS (3), N_FRAMES (T), HEIGHT (N), WIDTH (N)].
 
 N_CHANNELS is always 3.
-N_FRAMES is set 64.
-HEIGHT and WIDTH are both set to 224 pixels.
+N_FRAMES (temporal dimension) is set 64.
+HEIGHT = WIDTH = N.
+For test and validation videos N (spatial dimension) is set to 224.
+For train videos N (spatial dimension) is set to a random int between 64 and 336.
 BATCH SIZE is 2 for training (we train with a double batch composed by an original video and its manipulated version) and 1 for test and validation.
 
 Input videos are loaded through data loaders (check load_data.py and speednet_utils.py for more details).
@@ -37,12 +39,11 @@ def training(optimizer, criterion, model, train_dl, platf):
     :return: nothing
     """
 
-    count = 1
     for batch in tqdm(train_dl, total=len(train_dl), desc='training'):
         # getting files path and label (each batch will contain original and manipulated versions of same video)
         # video 1 is original (class=0.0)
         # video 2 is manipulated (class=1.0)
-        data, video_labels, skip = train_data_processing(batch, N, T)
+        data, video_labels, skip = train_data_processing(batch, T)
         if not skip:
             data = data.to(platf)
             video_labels = video_labels.to(platf)
@@ -185,8 +186,10 @@ def main():
     # SAVING TRAINED MODEL
     torch.save(model.state_dict(), SAVE_PATH)
 
-    # TESTING (here is still on 64 frames, in speednet_test.py is on 16 frames)
+    # TESTING (reloading model in order to test on segments of 16 frames)
     print("TESTING SPEEDNET")
+    model = S3DG(num_classes=1, num_frames=16)
+    model.load_state_dict(torch.load(SAVE_PATH))
     model.eval()
     testing(model, test_dl, platf)
 
