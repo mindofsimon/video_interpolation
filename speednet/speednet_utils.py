@@ -131,16 +131,16 @@ def preprocess_train_video(vid, t, n):
     Spatial and temporal augmentations are applied.
     :param vid: input video
     :param t: temporal dimension (number of consecutive frames to take)
-    :param n: spatial dimension (224)
+    :param n: spatial dimension (random number in range (64, 336))
     :return: two lists of T consecutive preprocessed frames (one for normal speed, one for 2x speed)
     """
 
-    f_list = []  # original
+    f_list = []  # containing original video frames
     cap = cv2.VideoCapture(vid)
     success, frame = cap.read()
     while success:
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # spatial augmentation
+        # spatial augmentation (resizing image to n x n)
         frame_rgb = cv2.resize(frame_rgb, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
         f_list.append(frame_rgb/255)
         success, frame = cap.read()
@@ -148,7 +148,7 @@ def preprocess_train_video(vid, t, n):
     if len(f_list) > (3*t):  # a video could have less than 3*T frames! (and also than T frames!)
         f_list = f_list[0:(3 * t)]
 
-    # temporal augmentation
+    # temporal augmentation (sampling frames at different skip probabilities to create normal and sped-up video)
     factor_1 = round(random.uniform(1.0, 1.2), 2)
     prob_1 = 1 - (1 / factor_1)
     factor_2 = round(random.uniform(1.7, 2.2), 2)
@@ -198,32 +198,6 @@ def preprocess_test_video(vid, n, t):
     return f_list
 
 
-def test_val_data_processing(batch, n, t):
-    """
-    Data processing chain for test and validation videos.
-    :param batch: batch containing video path, video label and video smp
-    :param n: spatial dimension (frame size)
-    :param t: temporal dimension (frame number)
-    :return: input to the model(data, with batch size = 1), video label and skip flag.
-             skip flag indicates if a file has less frames than the number used for training.
-    """
-    data = None
-    skip_file = False
-    video_path, video_label, _ = batch
-    video_path = video_path[0]
-    video_label = float(video_label[0])
-    frames_list = preprocess_test_video(video_path, n, t)
-    if len(frames_list) < t:
-        skip_file = True
-    else:
-        frames_list = np.array([frames_list])
-        data = torch.autograd.Variable(torch.tensor(frames_list))
-        data = torch.reshape(data, (1, t, n, n, 3))
-        data = torch.permute(data, [0, 4, 1, 2, 3])
-        data = data.float()
-    return data, video_label, skip_file
-
-
 def train_data_processing(batch, t):
     """
     Data processing chain for train videos.
@@ -250,3 +224,29 @@ def train_data_processing(batch, t):
         data = torch.permute(data, [0, 4, 1, 2, 3])
         data = data.float()
     return data, video_labels, skip_file
+
+
+def test_val_data_processing(batch, n, t):
+    """
+    Data processing chain for test and validation videos.
+    :param batch: batch containing video path, video label and video smp
+    :param n: spatial dimension (frame size)
+    :param t: temporal dimension (frame number)
+    :return: input to the model(data, with batch size = 1), video label and skip flag.
+             skip flag indicates if a file has less frames than the number used for training.
+    """
+    data = None
+    skip_file = False
+    video_path, video_label, _ = batch
+    video_path = video_path[0]
+    video_label = float(video_label[0])
+    frames_list = preprocess_test_video(video_path, n, t)
+    if len(frames_list) < t:
+        skip_file = True
+    else:
+        frames_list = np.array([frames_list])
+        data = torch.autograd.Variable(torch.tensor(frames_list))
+        data = torch.reshape(data, (1, t, n, n, 3))
+        data = torch.permute(data, [0, 4, 1, 2, 3])
+        data = data.float()
+    return data, video_label, skip_file
