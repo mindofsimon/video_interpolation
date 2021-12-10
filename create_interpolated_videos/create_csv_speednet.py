@@ -4,6 +4,8 @@ Set the speed manipulation parameter of the videos, along with the roots in whic
 
 Each line of the csv contains:
     video path, video label (original = 0, manipulated = 1), video smp (if video is original is set to 1).
+    train videos will contain just original videos (sped-up versions will be created during training).
+    test/validation videos will contain both a mix of original and sped-up videos.
 """
 
 import csv
@@ -24,12 +26,10 @@ with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_
 
 # TRAIN
 originals_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/originals/'
-manipulated_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/2x/'
 with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/train.csv', mode='w', newline="") as videos:
     videos_writer = csv.writer(videos, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     for v in os.listdir(originals_root):
         videos_writer.writerow([originals_root + v, "0", "1"])
-        videos_writer.writerow([manipulated_root + v, "1", smp])
 
 # VALIDATION
 originals_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/originals/'
