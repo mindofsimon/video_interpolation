@@ -420,7 +420,7 @@ class S3DG(nn.Module):
             Mixed_5b(),
             Mixed_5c(),
             nn.MaxPool3d(kernel_size=(num_frames, 1, 1), stride=1),  # equal to global max pooling (reducing space)
-            nn.AvgPool3d(kernel_size=(1, 7, 7), stride=1),  # equal to global average pooling (reducing time)
+            nn.AdaptiveAvgPool3d(output_size=(1, 1, 1)),  # equal to global average pooling (reducing time)
             nn.Conv3d(1024, 512, kernel_size=1, stride=1, bias=True),
         )
 

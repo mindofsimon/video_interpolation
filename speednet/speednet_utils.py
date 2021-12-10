@@ -43,8 +43,9 @@ def load_data():
     Loading data from csv files (path, label, speed manipulation parameter) to VideoDataset class.
     Then from VideoDataset class into DataLoaders.
 
-    The train videos are loaded in double batch (original, manipulated).
-    Test and validation videos are loaded in single batch.
+    All videos are loaded in single batch (containing: video path, video label, video smp).
+    Train videos dataloader will contain just original videos (2x speed version will be created in training phase)
+    Test/Validation videos will contain both a mix of original and 2x speed videos.
 
     Be careful to put in originals csv the path to the video info csv files!
 
@@ -54,7 +55,7 @@ def load_data():
     # train ds
     videos_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/train.csv'
     dataset = VideoDataset(videos_csv)
-    train_data_loader = DataLoader(dataset, batch_size=2, shuffle=False, num_workers=2)
+    train_data_loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=2)
 
     # test ds
     videos_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/test.csv'
@@ -124,35 +125,49 @@ def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
     return resized
 
 
-def preprocess_train_video(vid, state, t, n):
+def preprocess_train_video(vid, t, n):
     """
     Preprocessing operations applied to train videos.
     Spatial and temporal augmentations are applied.
     :param vid: input video
-    :param state: 0 if video is original, 1 if video is manipulated
     :param t: temporal dimension (number of consecutive frames to take)
     :param n: spatial dimension (224)
-    :return: list of T consecutive preprocessed frames
+    :return: two lists of T consecutive preprocessed frames (one for normal speed, one for 2x speed)
     """
 
-    f_list = []
+    f_list = []  # original
     cap = cv2.VideoCapture(vid)
     success, frame = cap.read()
     while success:
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame_rgb = cv2.resize(frame_rgb, dsize=(n, n), interpolation=cv2.INTER_NEAREST)  # spatial augmentation
+        # spatial augmentation
+        frame_rgb = cv2.resize(frame_rgb, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
         f_list.append(frame_rgb/255)
         success, frame = cap.read()
 
     if len(f_list) > (3*t):  # a video could have less than 3*T frames! (and also than T frames!)
         f_list = f_list[0:(3 * t)]
 
-    if state == 1.0:  # sped up video
-        f_list = f_list[::2]  # temporal augmentation (2 is for 2x speed videos!)
-        # for the original videos we do nothing (like ::1)
+    # temporal augmentation
+    factor_1 = round(random.uniform(1.0, 1.2), 2)
+    prob_1 = 1 - (1 / factor_1)
+    factor_2 = round(random.uniform(1.7, 2.2), 2)
+    prob_2 = 1 - (1 / factor_2)
+    random_numbers = np.random.uniform(0, 1, len(f_list))
+    valid_frames_1 = np.where(random_numbers > prob_1)
+    valid_frames_2 = np.where(random_numbers > prob_2)
 
-    f_list = f_list[0:t]  # taking only T frames
-    return f_list
+    f_list_1 = np.array(f_list)
+    f_list_2 = np.array(f_list)
+    f_list_1 = f_list_1[valid_frames_1]  # normal speed
+    f_list_2 = f_list_2[valid_frames_2]  # 2x speed
+
+    # taking t frames only
+    f_list_1 = list(f_list_1)
+    f_list_2 = list(f_list_2)
+    f_list_1 = f_list_1[0:t]
+    f_list_2 = f_list_2[0:t]
+    return f_list_1, f_list_2
 
 
 def preprocess_test_video(vid, n, t):
@@ -220,20 +235,16 @@ def train_data_processing(batch, t):
 
     data = None
     skip_file = False
-    video_path, video_label, _ = batch
-    video_path_1 = video_path[0]
-    video_path_2 = video_path[1]
-    video_label_1 = float(video_label[0])
-    video_label_2 = float(video_label[1])
-    video_labels = torch.tensor([[video_label_1], [video_label_2]])
+    video_path, _, _ = batch
+    video_path = video_path[0]
+    video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
     # building input tensor
-    n = random.randrange(64, 336)
-    frames_list_1 = preprocess_train_video(video_path_1, video_label_1, t, n)
-    frames_list_2 = preprocess_train_video(video_path_2, video_label_2, t, n)
+    n = random.randrange(64, 224)  # should be between 64 and 336 but it depends on gpu memory limit...
+    frames_list_1, frames_list_2 = preprocess_train_video(video_path, t, n)
     if len(frames_list_1) < t or len(frames_list_2) < t:
         skip_file = True
     else:
-        frames_list = np.array([frames_list_1, frames_list_2])
+        frames_list = np.array([frames_list_1, frames_list_2])  # original, sped-up
         data = torch.autograd.Variable(torch.tensor(frames_list))
         data = torch.reshape(data, (2, t, n, n, 3))
         data = torch.permute(data, [0, 4, 1, 2, 3])

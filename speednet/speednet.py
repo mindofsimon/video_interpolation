@@ -40,11 +40,9 @@ def training(optimizer, criterion, model, train_dl, platf):
     """
 
     for batch in tqdm(train_dl, total=len(train_dl), desc='training'):
-        # getting files path and label (each batch will contain original and manipulated versions of same video)
-        # video 1 is original (class=0.0)
-        # video 2 is manipulated (class=1.0)
         data, video_labels, skip = train_data_processing(batch, T)
         if not skip:
+            # moving data to platform
             data = data.to(platf)
             video_labels = video_labels.to(platf)
             # predicting logits
@@ -76,10 +74,13 @@ def validating(criterion, model, valid_dl, platf):
         for batch in tqdm(valid_dl, total=len(valid_dl), desc='validating'):
             data, video_label, skip = test_val_data_processing(batch, N, T)
             if not skip:
+                # moving data to platform
                 data = data.to(platf)
                 video_label = torch.tensor([[video_label]])
                 video_label = video_label.to(platf)
+                # predicting logits
                 logits = model(data)
+                # calculating loss
                 val_loss += criterion(logits, video_label).item()
                 if torch.round(torch.sigmoid(logits)) == video_label:
                     correct += 1
@@ -109,11 +110,11 @@ def testing(model, test_dl, platf):
 
     with torch.no_grad():
         for batch in tqdm(test_dl, total=len(test_dl), desc='testing'):
-            # getting file path and label
             data, video_label, skip = test_val_data_processing(batch, N, T)
             if not skip:
-                # predicting logits and converting into probability
+                # moving data to platform
                 data = data.to(platf)
+                # predicting logits
                 logits = model(data)
                 manipulation_probability = torch.sigmoid(logits)
                 total = total + 1
