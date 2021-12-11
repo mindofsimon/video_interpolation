@@ -125,7 +125,7 @@ def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
     return resized
 
 
-def preprocess_train_video(vid, t, n):
+def preprocess_train_video(vid, n, t):
     """
     Preprocessing operations applied to train videos.
     Spatial and temporal augmentations are applied.
@@ -214,8 +214,8 @@ def train_data_processing(batch, t):
     video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
     # building input tensor
     n = random.randrange(64, 336)  # should be between 64 and 336 but it depends on gpu memory limit...
-    frames_list_1, frames_list_2 = preprocess_train_video(video_path, t, n)
-    data, skip_file = generate_data(frames_list_1, frames_list_2, t, n)
+    frames_list_1, frames_list_2 = preprocess_train_video(video_path, n, t)
+    data, skip_file = generate_data(frames_list_1, frames_list_2, n, t)
     return data, video_labels, skip_file
 
 
@@ -232,12 +232,12 @@ def test_val_data_processing(batch, n, t):
     video_path, _, _ = batch
     video_path = video_path[0]
     video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
-    frames_list_1, frames_list_2 = preprocess_test_video(video_path, t, n)
-    data, skip_file = generate_data(frames_list_1, frames_list_2, t, n)
+    frames_list_1, frames_list_2 = preprocess_test_video(video_path, n, t)
+    data, skip_file = generate_data(frames_list_1, frames_list_2, n, t)
     return data, video_labels, skip_file
 
 
-def generate_data(f_list_1, f_list_2, t, n):
+def generate_data(f_list_1, f_list_2, n, t):
     """
     Generate tensor as input for the model.
     :param f_list_1: frame list of original video

@@ -23,7 +23,7 @@ def preprocess_test_video_single_file(vid, n, t):
     return f_list
 
 
-def generate_data_single(f_list, t, n):
+def generate_data_single(f_list, n, t):
     skip_file = False
     data = None
     if len(f_list) < t:
@@ -39,8 +39,8 @@ def generate_data_single(f_list, t, n):
 
 
 def test_val_data_processing_single_file(vid, n, t):
-    frames_list = preprocess_test_video_single_file(vid, t, n)
-    data, skip_file = generate_data_single(frames_list, t, n)
+    frames_list = preprocess_test_video_single_file(vid, n, t)
+    data, skip_file = generate_data_single(frames_list, n, t)
     return data, skip_file
 
 
