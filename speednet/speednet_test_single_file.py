@@ -78,5 +78,6 @@ SAVE_PATH = 'speednet.pth'
 video_path = ''  # put here the path to the video you want to test
 model = S3DG(num_classes=1, num_frames=T)
 model.load_state_dict(torch.load(SAVE_PATH))
+model.to(plat)
 model.eval()
 testing(model, video_path, plat, T)
