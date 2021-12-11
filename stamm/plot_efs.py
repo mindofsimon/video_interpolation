@@ -6,10 +6,8 @@ The plot is composed by colored dots (Green = I frame, Red = B frame, Orange = P
 indicating the weight in bytes of each frame of the video.
 """
 
-import os.path
-import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-import common_functions
+from common_functions import *
 
 
 def plot_efs(frame_size_list, color_list):  # plots a video encoded frame size sequence
@@ -33,7 +31,7 @@ def plot_efs(frame_size_list, color_list):  # plots a video encoded frame size s
     plt.show()
 
 
-path = '/nas/public/dataset/EVA-7K/Videos/Facebook/subset_avidemux/D28_V_outdoor_move_0001.mp4'  # insert here the path of the video to display
-common_functions.create_json_file(path)
-f_sizes, f_types, f_colors = common_functions.read_json_file()
+path = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/originals/-ZRoSFQGAiA_000056_000066.mp4'  # insert here the path of the video to display
+f_sizes, _, f_colors = extract_frames_info(path)
 plot_efs(f_sizes, f_colors)
+
