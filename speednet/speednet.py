@@ -124,9 +124,9 @@ def testing(model, test_dl, platf, t):
                 predictions_list.append(np.round(manipulation_probabilities[1].item()))
                 test_labels.append(video_labels[0].item())
                 test_labels.append(video_labels[1].item())
-                if torch.round(manipulation_probabilities[0].item()) == video_labels[0].item():
+                if torch.round(manipulation_probabilities)[0].item() == video_labels[0].item():
                     true_positives = true_positives + 1
-                if torch.round(manipulation_probabilities[1].item()) == video_labels[1].item():
+                if torch.round(manipulation_probabilities)[1].item() == video_labels[1].item():
                     true_positives = true_positives + 1
     # EVALUATION METRICS
     print_eval_metrics(test_labels, predictions_list, true_positives, total)
@@ -197,6 +197,7 @@ def main():
     print("TESTING SPEEDNET")
     model = S3DG(num_classes=1, num_frames=16)
     model.load_state_dict(torch.load(SAVE_PATH))
+    model.to(platf)
     model.eval()
     testing(model, test_dl, platf, 16)
 

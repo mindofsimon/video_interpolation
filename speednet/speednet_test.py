@@ -19,6 +19,7 @@ platf = platform()
 SAVE_PATH = 'speednet.pth'
 model = S3DG(num_classes=1, num_frames=T)
 model.load_state_dict(torch.load(SAVE_PATH))
+model.to(platf)
 model.eval()
 _, test_dl, _ = load_data()
 testing(model, test_dl, platf, T)
