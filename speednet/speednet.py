@@ -4,11 +4,11 @@ It includes Training, Validation and Testing.
 The model takes as input a tensor of size [BATCH_SIZE, N_CHANNELS (3), N_FRAMES (T), HEIGHT (N), WIDTH (N)].
 
 N_CHANNELS is always 3.
-N_FRAMES (temporal dimension) is set 64.
+N_FRAMES (temporal dimension) is set 32.
 HEIGHT = WIDTH = N.
 For test and validation videos N (spatial dimension) is set to 224.
 For train videos N (spatial dimension) is set to a random int between 64 and 336.
-BATCH SIZE is 2 for training (we train with a double batch composed by an original video and its manipulated version) and 1 for test and validation.
+BATCH SIZE is always 2 (we train/test/validate with a double batch composed by an original video and its manipulated version)
 
 Input videos are loaded through data loaders (check load_data.py and speednet_utils.py for more details).
 """
@@ -23,7 +23,7 @@ from tqdm import tqdm
 
 
 # Input Parameters
-T = 64  # frame number
+T = 32  # frame number
 N = 224  # frame size (N x N)
 SAVE_PATH = 'speednet.pth'  # location of model
 
@@ -72,27 +72,28 @@ def validating(criterion, model, valid_dl, platf):
     n_skipped = 0  # to count the number of skipped videos (due to low number of frames)
     with torch.no_grad():
         for batch in tqdm(valid_dl, total=len(valid_dl), desc='validating'):
-            data, video_label, skip = test_val_data_processing(batch, N, T)
+            data, video_labels, skip = test_val_data_processing(batch, N, T)
             if not skip:
                 # moving data to platform
                 data = data.to(platf)
-                video_label = torch.tensor([[video_label]])
-                video_label = video_label.to(platf)
+                video_labels = video_labels.to(platf)
                 # predicting logits
                 logits = model(data)
                 # calculating loss
-                val_loss += criterion(logits, video_label).item()
-                if torch.round(torch.sigmoid(logits)) == video_label:
+                val_loss += criterion(logits, video_labels).item()
+                if torch.round(torch.sigmoid(logits))[0].item() == video_labels[0].item():
+                    correct += 1
+                if torch.round(torch.sigmoid(logits))[1].item() == video_labels[1].item():
                     correct += 1
             else:
                 n_skipped += 1
         val_loss /= (len(valid_dl) - n_skipped)
-        correct /= (len(valid_dl.dataset) - n_skipped)
+        correct /= ((len(valid_dl.dataset) - n_skipped) * 2)
         print(f"validation error: \n accuracy: {(100 * correct):>0.1f}%, avg loss: {val_loss:>8f}")
     return correct, val_loss
 
 
-def testing(model, test_dl, platf):
+def testing(model, test_dl, platf, t):
     """
     Test function
     :param model: actual model (S3DG)
@@ -110,17 +111,22 @@ def testing(model, test_dl, platf):
 
     with torch.no_grad():
         for batch in tqdm(test_dl, total=len(test_dl), desc='testing'):
-            data, video_label, skip = test_val_data_processing(batch, N, T)
+            data, video_labels, skip = test_val_data_processing(batch, N, t)
             if not skip:
                 # moving data to platform
                 data = data.to(platf)
+                video_labels = video_labels.to(platf)
                 # predicting logits
                 logits = model(data)
-                manipulation_probability = torch.sigmoid(logits)
-                total = total + 1
-                predictions_list.append(np.round(manipulation_probability[0].item()))
-                test_labels.append(video_label)
-                if torch.round(manipulation_probability) == video_label:
+                manipulation_probabilities = torch.sigmoid(logits)
+                total = total + 2
+                predictions_list.append(np.round(manipulation_probabilities[0].item()))
+                predictions_list.append(np.round(manipulation_probabilities[1].item()))
+                test_labels.append(video_labels[0].item())
+                test_labels.append(video_labels[1].item())
+                if torch.round(manipulation_probabilities[0].item()) == video_labels[0].item():
+                    true_positives = true_positives + 1
+                if torch.round(manipulation_probabilities[1].item()) == video_labels[1].item():
                     true_positives = true_positives + 1
     # EVALUATION METRICS
     print_eval_metrics(test_labels, predictions_list, true_positives, total)
@@ -192,7 +198,7 @@ def main():
     model = S3DG(num_classes=1, num_frames=16)
     model.load_state_dict(torch.load(SAVE_PATH))
     model.eval()
-    testing(model, test_dl, platf)
+    testing(model, test_dl, platf, 16)
 
 
 if __name__ == '__main__':

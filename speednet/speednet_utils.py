@@ -132,7 +132,7 @@ def preprocess_train_video(vid, t, n):
     :param vid: input video
     :param t: temporal dimension (number of consecutive frames to take)
     :param n: spatial dimension (random number in range (64, 336))
-    :return: two lists of T consecutive preprocessed frames (one for normal speed, one for 2x speed)
+    :return: two lists of t consecutive preprocessed frames (one for normal speed, one for 2x speed)
     """
 
     f_list = []  # containing original video frames
@@ -179,10 +179,10 @@ def preprocess_test_video(vid, n, t):
     :param vid: input video
     :param n: spatial dimension (224)
     :param t: temporal dimension (number of consecutive frames to take)
-    :return: list of t consecutive preprocessed frames
+    :return: two lists of t consecutive preprocessed frames (one for normal speed, one for 2x speed)
     """
 
-    f_list = []
+    f_list_1 = []
     cap = cv2.VideoCapture(vid)
     success, frame = cap.read()
     while success:
@@ -191,11 +191,13 @@ def preprocess_test_video(vid, n, t):
         if res_frame_rgb.shape[1] < n:  # in case width is lower than 224 pixels, we resize it to 224
             res_frame_rgb = cv2.resize(res_frame_rgb, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
         crop_frame_rgb = center_crop(res_frame_rgb)
-        f_list.append(crop_frame_rgb/255)
+        f_list_1.append(crop_frame_rgb/255)
         success, frame = cap.read()
 
-    f_list = f_list[0:t]  # taking only T frames
-    return f_list
+    f_list_2 = f_list_1[::2]
+    f_list_2 = f_list_2[0:t]  # taking only T frames
+    f_list_1 = f_list_1[0:t]  # taking only T frames
+    return f_list_1, f_list_2
 
 
 def train_data_processing(batch, t):
@@ -207,22 +209,13 @@ def train_data_processing(batch, t):
              skip flag indicates if a file has less frames than the number used for training.
     """
 
-    data = None
-    skip_file = False
     video_path, _, _ = batch
     video_path = video_path[0]
     video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
     # building input tensor
-    n = random.randrange(64, 224)  # should be between 64 and 336 but it depends on gpu memory limit...
+    n = random.randrange(64, 336)  # should be between 64 and 336 but it depends on gpu memory limit...
     frames_list_1, frames_list_2 = preprocess_train_video(video_path, t, n)
-    if len(frames_list_1) < t or len(frames_list_2) < t:
-        skip_file = True
-    else:
-        frames_list = np.array([frames_list_1, frames_list_2])  # original, sped-up
-        data = torch.autograd.Variable(torch.tensor(frames_list))
-        data = torch.reshape(data, (2, t, n, n, 3))
-        data = torch.permute(data, [0, 4, 1, 2, 3])
-        data = data.float()
+    data, skip_file = generate_data(frames_list_1, frames_list_2, t, n)
     return data, video_labels, skip_file
 
 
@@ -232,21 +225,36 @@ def test_val_data_processing(batch, n, t):
     :param batch: batch containing video path, video label and video smp
     :param n: spatial dimension (frame size)
     :param t: temporal dimension (frame number)
-    :return: input to the model(data, with batch size = 1), video label and skip flag.
-             skip flag indicates if a file has less frames than the number used for training.
+    :return: input to the model(data, with batch size = 2), video label and skip flag.
+             skip flag indicates if a file has less frames than the number used for testing/validating.
     """
-    data = None
-    skip_file = False
-    video_path, video_label, _ = batch
+
+    video_path, _, _ = batch
     video_path = video_path[0]
-    video_label = float(video_label[0])
-    frames_list = preprocess_test_video(video_path, n, t)
-    if len(frames_list) < t:
+    video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
+    frames_list_1, frames_list_2 = preprocess_test_video(video_path, t, n)
+    data, skip_file = generate_data(frames_list_1, frames_list_2, t, n)
+    return data, video_labels, skip_file
+
+
+def generate_data(f_list_1, f_list_2, t, n):
+    """
+    Generate tensor as input for the model.
+    :param f_list_1: frame list of original video
+    :param f_list_2: frame list of sped up video
+    :param t: number of consecutive taken frames (temporal dimension)
+    :param n: size of the frames (spatial dimension)
+    :return: input tensor to feed the model and skip flag (if video has too low number of frames and has to be skipped)
+    """
+    skip_file = False
+    data = None
+    if len(f_list_1) < t or len(f_list_2) < t:
         skip_file = True
     else:
-        frames_list = np.array([frames_list])
+        frames_list = np.array([f_list_1, f_list_2])  # original, sped-up
         data = torch.autograd.Variable(torch.tensor(frames_list))
-        data = torch.reshape(data, (1, t, n, n, 3))
+        data = torch.reshape(data, (2, t, n, n, 3))
         data = torch.permute(data, [0, 4, 1, 2, 3])
         data = data.float()
-    return data, video_label, skip_file
+
+    return data, skip_file
