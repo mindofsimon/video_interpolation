@@ -25,7 +25,7 @@ from tqdm import tqdm
 # Input Parameters
 T = 32  # frame number
 N = 224  # frame size (N x N)
-SAVE_PATH = 'speednet.pth'  # location of model
+SAVE_PATH = '/nas/home/smariani/video_interpolation/speednet/speednet.pth'  # location of model
 
 
 def training(optimizer, criterion, model, train_dl, platf):
@@ -145,7 +145,7 @@ def main():
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters())
     lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, mode='min', verbose=True)
-    epochs = 10
+    epochs = 15
     best_acc = 0
     no_improvement = 0     # n of epochs with no improvements
     patience = 10          # max n of epoch with no improvements
@@ -182,13 +182,13 @@ def main():
             print(f'Early stopped at epoch {e}')
             # Save history for early stopping
             df = pd.DataFrame(history)
-            df.to_csv("history.csv")
+            df.to_csv("/nas/home/smariani/video_interpolation/speednet/history.csv")
             break
 
     print("Done!")
     # Save history
     df = pd.DataFrame(history)
-    df.to_csv("history.csv")
+    df.to_csv("/nas/home/smariani/video_interpolation/speednet/history.csv")
 
     # SAVING TRAINED MODEL
     torch.save(model.state_dict(), SAVE_PATH)
