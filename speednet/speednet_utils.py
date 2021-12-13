@@ -44,8 +44,7 @@ def load_data():
     Then from VideoDataset class into DataLoaders.
 
     All videos are loaded in single batch (containing: video path, video label, video smp).
-    Train videos dataloader will contain just original videos (2x speed version will be created in training phase)
-    Test/Validation videos will contain both a mix of original and 2x speed videos.
+    Train/Test/Validation videos dataloaders will contain just original videos (2x speed version will be created during training phase)
 
     Be careful to put in originals csv the path to the video info csv files!
 
@@ -128,6 +127,7 @@ def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
 def preprocess_train_video(vid, n, t):
     """
     Preprocessing operations applied to train videos.
+    Also the 2x speed version of the original video is created by subsampling video frames.
     Spatial and temporal augmentations are applied.
     :param vid: input video
     :param t: temporal dimension (number of consecutive frames to take)
@@ -170,9 +170,10 @@ def preprocess_train_video(vid, n, t):
     return f_list_1, f_list_2
 
 
-def preprocess_test_video(vid, n, t):
+def preprocess_test_val_video(vid, n, t):
     """
     Preprocessing operations applied to test and validation videos.
+    Also the 2x speed version of the original video is created by subsampling video frames.
     No spatial and temporal augmentations.
     Image is resized to 224 pixels on the height maintaining ratio.
     Center cropping 224x224 is then applied.
@@ -203,6 +204,7 @@ def preprocess_test_video(vid, n, t):
 def train_data_processing(batch, t):
     """
     Data processing chain for train videos.
+    From video path to input (to the model) tensor.
     :param batch: batch containing video path, video label and video smp
     :param t: temporal dimension (frame number)
     :return: input to the model(data, with batch size = 2), video labels, and skip flag.
@@ -232,7 +234,7 @@ def test_val_data_processing(batch, n, t):
     video_path, _, _ = batch
     video_path = video_path[0]
     video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
-    frames_list_1, frames_list_2 = preprocess_test_video(video_path, n, t)
+    frames_list_1, frames_list_2 = preprocess_test_val_video(video_path, n, t)
     data, skip_file = generate_data(frames_list_1, frames_list_2, n, t)
     return data, video_labels, skip_file
 
@@ -240,6 +242,8 @@ def test_val_data_processing(batch, n, t):
 def generate_data(f_list_1, f_list_2, n, t):
     """
     Generate tensor as input for the model.
+    Starts from the frames lists of normal and 2x speed videos.
+    Produces tensor of size [BATCH_SIZE(2), N_CHANNELS(3), N_FRAMES(t), HEIGHT(n), WIDTH(n)]
     :param f_list_1: frame list of original video
     :param f_list_2: frame list of sped up video
     :param t: number of consecutive taken frames (temporal dimension)
