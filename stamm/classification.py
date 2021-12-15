@@ -61,7 +61,7 @@ print("FITTING THE MODEL...")
 classifier.fit(x_train, y_train_cl)
 
 # SAVING MODEL
-model_name = "/nas/home/smariani/video_interpolation/stamm/classifier_15_new.sav"
+model_name = "/nas/home/smariani/video_interpolation/stamm/classifier_15_prob.sav"
 pickle.dump(classifier, open(model_name, 'wb'))
 
 # PREDICTING
