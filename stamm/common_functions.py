@@ -75,7 +75,7 @@ def print_classification_evaluation_metrics(y_test_cl, predictions):
     plt.xlabel("Predicted Labels")
     plt.ylabel("True Labels")
     plt.title("Confusion Matrix (CLASSIFICATION)")
-    plt.savefig("cm_classification.png")
+    plt.savefig("/nas/home/smariani/video_interpolation/stamm/cm_classification.png")
     plt.show()
     accuracy = (tp + tn) / (tp + tn + fp + fn)
     print("\n*********************CLASSIFICATION*********************")

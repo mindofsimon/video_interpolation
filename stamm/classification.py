@@ -54,15 +54,14 @@ x = x_train + x_test
 y_cl = y_train_cl + y_test_cl
 
 # BUILING SVM (SPEED MANIPULATION DETECTION)
-classifier = svm.SVC(kernel='rbf')
+classifier = svm.SVC(kernel='rbf', probability=True)
 
 # TRAINING SVM
 print("FITTING THE MODEL...")
 classifier.fit(x_train, y_train_cl)
 
 # SAVING MODEL
-model_name = "classifier_15.sav"
-remove_previous_file(model_name)
+model_name = "/nas/home/smariani/video_interpolation/stamm/classifier_15_new.sav"
 pickle.dump(classifier, open(model_name, 'wb'))
 
 # PREDICTING

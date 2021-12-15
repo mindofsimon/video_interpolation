@@ -9,10 +9,9 @@ from tqdm import tqdm
 
 
 # LOADING MODEL
-classifier = pickle.load(open('classifier_15.sav', 'rb'))
+classifier = pickle.load(open('classifier_15_new.sav', 'rb'))
 coefficients = []
 label_list = []
-
 
 # LOADING DATA
 _, test_dl = load_data()

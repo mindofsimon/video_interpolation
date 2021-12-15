@@ -64,8 +64,7 @@ print("FITTING THE MODEL...")
 regressor.fit(x_train, y_train_re)
 
 # SAVING MODEL
-model_name = "regressor.sav"
-remove_previous_file(model_name)
+model_name = "/nas/home/smariani/video_interpolation/stamm/regressor.sav"
 pickle.dump(regressor, open(model_name, 'wb'))
 
 # PREDICTING
