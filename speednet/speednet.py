@@ -4,7 +4,7 @@ It includes Training, Validation and Testing.
 The model takes as input a tensor of size [BATCH_SIZE, N_CHANNELS (3), N_FRAMES (T), HEIGHT (N), WIDTH (N)].
 
 N_CHANNELS is always 3.
-N_FRAMES (temporal dimension) is set 32.
+N_FRAMES (temporal dimension) is set to 32.
 HEIGHT = WIDTH = N.
 For test and validation videos N (spatial dimension) is set to 224.
 For train videos N (spatial dimension) is set to a random int between 64 and 336.
@@ -140,12 +140,13 @@ def main():
     platf = platform()
     # Model Parameters
     model = S3DG(num_classes=1, num_frames=T)
+    model.load_state_dict(torch.load(SAVE_PATH))
     model.to(platf)
     model.train()
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters())
+    optimizer = optim.Adam(model.parameters(), lr=1e-06)
     lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, mode='min', verbose=True)
-    epochs = 15
+    epochs = 5
     best_acc = 0
     no_improvement = 0     # n of epochs with no improvements
     patience = 10          # max n of epoch with no improvements

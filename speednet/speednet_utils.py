@@ -32,7 +32,7 @@ def print_eval_metrics(test_labels, predictions_list, true_positives, total):
     plt.xlabel("Predicted Labels")
     plt.ylabel("True Labels")
     plt.title("Confusion Matrix (SPEEDNET)")
-    plt.savefig('cm_speednet.png')
+    plt.savefig('/nas/home/smariani/video_interpolation/speednet/cm_speednet.png')
     plt.show()
     accuracy = round(((true_positives / total) * 100), 3)
     print("Accuracy:" + str(accuracy) + "%")
