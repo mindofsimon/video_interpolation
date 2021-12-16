@@ -33,8 +33,8 @@ def load_data():
 
     # train ds
     videos_csv = '/nas/home/smariani/video_interpolation/datasets/dfdc/partition35/train/train.csv'
-    dataset = VideoDataset(videos_csv)
-    train_data_loader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=2)
+    train_dataset = VideoDataset(videos_csv)
+    train_data_loader = DataLoader(train_dataset, batch_size=1, shuffle=False, num_workers=2)
 
     # test ds
     videos_csv = '/nas/home/smariani/video_interpolation/datasets/dfdc/partition35/test/test.csv'

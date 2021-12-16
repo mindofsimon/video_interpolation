@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 
 # LOADING MODEL
-regressor = pickle.load(open('regressor.sav', 'rb'))
+regressor = pickle.load(open('/nas/home/smariani/video_interpolation/stamm/models/regressor.sav', 'rb'))
 coefficients = []
 smp_list = []
 

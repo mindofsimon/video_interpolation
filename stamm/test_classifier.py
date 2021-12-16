@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 
 # LOADING MODEL
-classifier = pickle.load(open('classifier_15_prob.sav', 'rb'))
+classifier = pickle.load(open('/nas/home/smariani/video_interpolation/stamm/models/classifier_15_prob.sav', 'rb'))
 coefficients = []
 label_list = []
 
