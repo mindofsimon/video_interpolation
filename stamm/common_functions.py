@@ -71,7 +71,7 @@ def print_classification_evaluation_metrics(y_test_cl, predictions):
     tn, fn, fp, tp = conf_matrix.ravel()
     plt.figure(figsize=(10, 10), dpi=300)
     df_cm = pd.DataFrame(conf_matrix, index=["original", "modified"], columns=["original", "modified"])
-    sn.heatmap(df_cm, annot=True, annot_kws={"size": 16})
+    sn.heatmap(df_cm, annot=True, fmt='d', annot_kws={"size": 16})
     plt.xlabel("Predicted Labels")
     plt.ylabel("True Labels")
     plt.title("Confusion Matrix (CLASSIFICATION)")
