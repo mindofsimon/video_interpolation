@@ -28,7 +28,7 @@ def print_eval_metrics(test_labels, predictions_list, true_positives, total):
     conf_matrix = confusion_matrix(test_labels, predictions_list, labels=[0.0, 1.0])
     plt.figure(figsize=(10, 10), dpi=300)
     df_cm = pd.DataFrame(conf_matrix, index=["original", "modified"], columns=["original", "modified"])
-    sn.heatmap(df_cm, annot=True, annot_kws={"size": 16})
+    sn.heatmap(df_cm, annot=True, fmt='d', annot_kws={"size": 16})
     plt.xlabel("Predicted Labels")
     plt.ylabel("True Labels")
     plt.title("Confusion Matrix (SPEEDNET)")

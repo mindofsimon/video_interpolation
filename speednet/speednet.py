@@ -140,13 +140,13 @@ def main():
     platf = platform()
     # Model Parameters
     model = S3DG(num_classes=1, num_frames=T)
-    model.load_state_dict(torch.load(SAVE_PATH))
+    # model.load_state_dict(torch.load(SAVE_PATH))
     model.to(platf)
     model.train()
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=1e-06)
+    optimizer = optim.Adam(model.parameters())
     lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, mode='min', verbose=True)
-    epochs = 5
+    epochs = 20
     best_acc = 0
     no_improvement = 0     # n of epochs with no improvements
     patience = 10          # max n of epoch with no improvements
