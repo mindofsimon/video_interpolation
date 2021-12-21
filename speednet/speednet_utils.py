@@ -52,17 +52,17 @@ def load_data():
     """
 
     # train ds
-    videos_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/train/train.csv'
+    videos_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/train.csv'
     dataset = VideoDataset(videos_csv)
     train_data_loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=2)
 
     # test ds
-    videos_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/test/test.csv'
+    videos_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/test.csv'
     test_dataset = VideoDataset(videos_csv)
     test_data_loader = DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=2)
 
     # valid ds
-    videos_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/kinetics_videos/validation/validation.csv'
+    videos_csv = '/nas/home/smariani/video_interpolation/datasets/kinetics400/validation.csv'
     valid_dataset = VideoDataset(videos_csv)
     valid_data_loader = DataLoader(valid_dataset, batch_size=1, shuffle=True, num_workers=2)
 
