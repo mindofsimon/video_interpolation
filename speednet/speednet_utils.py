@@ -135,8 +135,11 @@ def preprocess_train_video(vid, n, t):
     :return: two lists of t consecutive preprocessed frames (one for normal speed, one for 2x speed)
     """
 
+    corrupted = False
     f_list = []  # containing original video frames
     cap = cv2.VideoCapture(vid)
+    if not cap.isOpened():
+        corrupted = True
     success, frame = cap.read()
     while success:
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -167,7 +170,7 @@ def preprocess_train_video(vid, n, t):
     f_list_2 = list(f_list_2)
     f_list_1 = f_list_1[0:t]
     f_list_2 = f_list_2[0:t]
-    return f_list_1, f_list_2
+    return f_list_1, f_list_2, corrupted
 
 
 def preprocess_test_val_video(vid, n, t):
@@ -183,8 +186,11 @@ def preprocess_test_val_video(vid, n, t):
     :return: two lists of t consecutive preprocessed frames (one for normal speed, one for 2x speed)
     """
 
+    corrupted = False
     f_list_1 = []
     cap = cv2.VideoCapture(vid)
+    if not cap.isOpened():
+        corrupted = True
     success, frame = cap.read()
     while success:
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -198,7 +204,7 @@ def preprocess_test_val_video(vid, n, t):
     f_list_2 = f_list_1[::2]
     f_list_2 = f_list_2[0:t]  # taking only T frames
     f_list_1 = f_list_1[0:t]  # taking only T frames
-    return f_list_1, f_list_2
+    return f_list_1, f_list_2, corrupted
 
 
 def train_data_processing(batch, t):
@@ -211,13 +217,17 @@ def train_data_processing(batch, t):
              skip flag indicates if a file has less frames than the number used for training.
     """
 
+    data = None
     video_path, _, _ = batch
     video_path = video_path[0]
     video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
     # building input tensor
     n = random.randrange(64, 336)  # should be between 64 and 336 but it depends on gpu memory limit...
-    frames_list_1, frames_list_2 = preprocess_train_video(video_path, n, t)
-    data, skip_file = generate_data(frames_list_1, frames_list_2, n, t)
+    frames_list_1, frames_list_2, corrupted = preprocess_train_video(video_path, n, t)
+    if not corrupted:
+        data, skip_file = generate_data(frames_list_1, frames_list_2, n, t)
+    else:
+        skip_file = True
     return data, video_labels, skip_file
 
 
@@ -231,11 +241,15 @@ def test_val_data_processing(batch, n, t):
              skip flag indicates if a file has less frames than the number used for testing/validating.
     """
 
+    data = None
     video_path, _, _ = batch
     video_path = video_path[0]
     video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
-    frames_list_1, frames_list_2 = preprocess_test_val_video(video_path, n, t)
-    data, skip_file = generate_data(frames_list_1, frames_list_2, n, t)
+    frames_list_1, frames_list_2, corrupted = preprocess_test_val_video(video_path, n, t)
+    if not corrupted:
+        data, skip_file = generate_data(frames_list_1, frames_list_2, n, t)
+    else:
+        skip_file = True
     return data, video_labels, skip_file
 
 
