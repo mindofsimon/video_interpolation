@@ -4,7 +4,7 @@ It includes Training, Validation and Testing.
 The model takes as input a tensor of size [BATCH_SIZE, N_CHANNELS (3), N_FRAMES (T), HEIGHT (N), WIDTH (N)].
 
 N_CHANNELS is always 3.
-N_FRAMES (temporal dimension) is set to 32.
+N_FRAMES (temporal dimension) is set to 64.
 HEIGHT = WIDTH = N.
 For test and validation videos N (spatial dimension) is set to 224.
 For train videos N (spatial dimension) is set to a random int between 64 and 336.
@@ -12,7 +12,7 @@ BATCH SIZE is always 2 (we train/test/validate with a double batch composed by a
 
 Input videos are loaded through data loaders (check load_data.py and speednet_utils.py for more details).
 """
-
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from s3dg_torch import S3DG
@@ -23,7 +23,7 @@ from tqdm import tqdm
 
 
 # Input Parameters
-T = 32  # frame number
+T = 64  # frame number
 N = 224  # frame size (N x N)
 SAVE_PATH = '/nas/home/smariani/video_interpolation/speednet/speednet.pth'  # location of model
 
@@ -134,19 +134,21 @@ def testing(model, test_dl, platf, t):
 
 def main():
     # GPU parameters
-    set_gpu(0)
+    # set_gpu(0)
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
     set_backend()
     set_seed()
     platf = platform()
     # Model Parameters
     model = S3DG(num_classes=1, num_frames=T)
     # model.load_state_dict(torch.load(SAVE_PATH))
+    model = nn.DataParallel(model)  # just to train faster (multi GPU)
     model.to(platf)
     model.train()
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-02)
     lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, mode='min', verbose=True)
-    epochs = 3
+    epochs = 2
     best_acc = 0
     no_improvement = 0     # n of epochs with no improvements
     patience = 10          # max n of epoch with no improvements
