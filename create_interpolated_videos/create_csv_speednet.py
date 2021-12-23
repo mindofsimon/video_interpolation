@@ -14,13 +14,15 @@ import cv2
 
 # FOR SPEEDNET (KINETICS VIDEOS)
 smp = 2
-total_files = 10000  # then 90% will be used for training, 10% both for test and validation
+total_files = 20000  # then 90% will be used for training, 10% both for test and validation
 
 # TRAIN
 skipped_tra = 0
+ok_tra = 0
 originals_root = '/nas/home/pbestagini/kinetics/k400/train/'
 video_list = [v for v in os.listdir(originals_root) if v.endswith('.mp4')]
 video_list = video_list[0:int(total_files*0.9)]
+tot_tra = len(video_list)
 with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/train.csv', mode='w', newline="") as videos:
     videos_writer = csv.writer(videos, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     for v in video_list:
@@ -28,14 +30,17 @@ with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/train.csv
             cap = cv2.VideoCapture(originals_root + v)
             if cap.isOpened():
                 videos_writer.writerow([originals_root + v, "0", "1"])
+                ok_tra += 1
             else:  # in case the file is corrupted, we skip it
                 skipped_tra += 1
 
 # TEST
 skipped_tes = 0
+ok_tes = 0
 originals_root = '/nas/home/pbestagini/kinetics/k400/test/'
 video_list = [v for v in os.listdir(originals_root) if v.endswith('.mp4')]
 video_list = video_list[0:int(total_files*0.1)]
+tot_tes = len(video_list)
 with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/test.csv', mode='w', newline="") as videos:
     videos_writer = csv.writer(videos, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     for v in video_list:
@@ -43,15 +48,18 @@ with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/test.csv'
             cap = cv2.VideoCapture(originals_root + v)
             if cap.isOpened():
                 videos_writer.writerow([originals_root + v, "0", "1"])
+                ok_tes += 1
             else:  # in case the file is corrupted, we skip it
                 skipped_tes += 1
 
 
 # VALIDATION
 skipped_val = 0
+ok_val = 0
 originals_root = '/nas/home/pbestagini/kinetics/k400/val/'
 video_list = [v for v in os.listdir(originals_root) if v.endswith('.mp4')]
 video_list = video_list[0:int(total_files*0.1)]
+tot_val = len(video_list)
 with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/validation.csv', mode='w', newline="") as videos:
     videos_writer = csv.writer(videos, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     for v in video_list:
@@ -59,9 +67,10 @@ with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/validatio
             cap = cv2.VideoCapture(originals_root + v)
             if cap.isOpened():
                 videos_writer.writerow([originals_root + v, "0", "1"])
+                ok_val += 1
             else:  # in case the file is corrupted, we skip it
                 skipped_val += 1
 
-print("Skipped "+str(skipped_tra)+" files for training")
-print("Skipped "+str(skipped_tes)+" files for testing")
-print("Skipped "+str(skipped_val)+" files for validation")
+print("TRAIN\nTotal videos: "+str(tot_tra)+" Valid videos: "+str(ok_tra)+" Corrupted videos: "+str(skipped_tra))
+print("TEST\nTotal videos: "+str(tot_tes)+" Valid videos: "+str(ok_tes)+" Corrupted videos: "+str(skipped_tes))
+print("VALIDATION\nTotal videos: "+str(tot_val)+" Valid videos: "+str(ok_val)+" Corrupted videos: "+str(skipped_val))
