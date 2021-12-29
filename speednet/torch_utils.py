@@ -52,7 +52,7 @@ def set_seed(seed: int = 42) -> None:
 def platform():
     if torch_on_cuda():
         # watch out! cuda for torch is 0 because it is the first torch can see! It is not the os.environ one!
-        device = "cuda"
+        device = "cuda:0"
     else:
         device = "cpu"
     return torch.device(device)

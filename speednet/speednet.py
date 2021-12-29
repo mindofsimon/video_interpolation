@@ -134,21 +134,21 @@ def testing(model, test_dl, platf, t):
 
 def main():
     # GPU parameters
-    # set_gpu(0)
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
+    set_gpu(0)
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
     set_backend()
     set_seed()
     platf = platform()
     # Model Parameters
     model = S3DG(num_classes=1, num_frames=T)
     # model.load_state_dict(torch.load(SAVE_PATH))
-    model = nn.DataParallel(model)  # just to train faster (multi GPU)
+    # model = nn.DataParallel(model)  # just to train faster (multi GPU)
     model.to(platf)
     model.train()
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-02)
     lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, mode='min', verbose=True)
-    epochs = 2
+    epochs = 10
     best_acc = 0
     no_improvement = 0     # n of epochs with no improvements
     patience = 10          # max n of epoch with no improvements
@@ -167,6 +167,9 @@ def main():
         correct, val_loss = validating(criterion, model, valid_dl, platf)
         lr_scheduler.step(val_loss)
         history.append({"epoch": e, "loss": val_loss, "lr": optimizer.param_groups[0]['lr']})
+        # SAVE MODEL EVERY 3 EPOCHS
+        if (e+1) % 3 == 0:
+            torch.save(model.state_dict(), SAVE_PATH)
         # MODEL CHECKPOINT CALLBACK
         accuracy = correct
         if accuracy > best_acc:
