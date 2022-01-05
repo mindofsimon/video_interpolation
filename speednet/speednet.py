@@ -193,9 +193,6 @@ def main():
     df = pd.DataFrame(history)
     df.to_csv("/nas/home/smariani/video_interpolation/speednet/history.csv")
 
-    # SAVING TRAINED MODEL
-    torch.save(model.state_dict(), SAVE_PATH)
-
     # TESTING (reloading model in order to test on segments of 16 frames)
     print("TESTING SPEEDNET")
     model = S3DG(num_classes=1, num_frames=16)
