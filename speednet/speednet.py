@@ -151,7 +151,7 @@ def main():
     epochs = 10
     best_acc = 0
     no_improvement = 0     # n of epochs with no improvements
-    patience = 10          # max n of epoch with no improvements
+    patience = 5          # max n of epoch with no improvements
     min_val_loss = np.inf
     history = []
 
@@ -167,9 +167,6 @@ def main():
         correct, val_loss = validating(criterion, model, valid_dl, platf)
         lr_scheduler.step(val_loss)
         history.append({"epoch": e, "loss": val_loss, "lr": optimizer.param_groups[0]['lr']})
-        # SAVE MODEL EVERY 3 EPOCHS
-        if (e+1) % 3 == 0:
-            torch.save(model.state_dict(), SAVE_PATH)
         # MODEL CHECKPOINT CALLBACK
         accuracy = correct
         if accuracy > best_acc:
