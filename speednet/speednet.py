@@ -148,7 +148,7 @@ def main():
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-02)
     lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, mode='min', verbose=True)
-    epochs = 10
+    epochs = 1
     best_acc = 0
     no_improvement = 0     # n of epochs with no improvements
     patience = 5          # max n of epoch with no improvements
