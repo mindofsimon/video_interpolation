@@ -11,7 +11,7 @@ import cv2
 
 
 # FOR SPEEDNET (KINETICS VIDEOS)
-total_files = 100000  # then 90% will be used for training, 10% both for test and validation
+total_files = 30000  # then 90% will be used for training, 10% both for test and validation
 
 # TRAIN
 skipped_tra = 0
