@@ -138,15 +138,14 @@ def preprocess_train_video(vid, n, t):
     f_list = []  # containing original video frames
     cap = cv2.VideoCapture(vid)
     success, frame = cap.read()
-    while success:
+    i = 0
+    while success and i < (3*t):  # extracting 3*t frames (if video has less than 3*t frames we extract them all)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # spatial augmentation (resizing image to n x n)
         frame_rgb = cv2.resize(frame_rgb, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
         f_list.append(frame_rgb/255)
+        i += 1
         success, frame = cap.read()
-
-    if len(f_list) > (3*t):  # a video could have less than 3*T frames! (and also than T frames!)
-        f_list = f_list[0:(3 * t)]
 
     # temporal augmentation (sampling frames at different skip probabilities to create normal and sped-up video)
     factor_1 = round(random.uniform(1.0, 1.2), 2)
@@ -186,13 +185,15 @@ def preprocess_test_val_video(vid, n, t):
     f_list_1 = []
     cap = cv2.VideoCapture(vid)
     success, frame = cap.read()
-    while success:
+    i = 0
+    while success and i < (3*t):
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         res_frame_rgb = image_resize(frame_rgb, height=n)
         if res_frame_rgb.shape[1] < n:  # in case width is lower than 224 pixels, we resize it to 224
             res_frame_rgb = cv2.resize(res_frame_rgb, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
         crop_frame_rgb = center_crop(res_frame_rgb)
         f_list_1.append(crop_frame_rgb/255)
+        i += 1
         success, frame = cap.read()
 
     f_list_2 = f_list_1[::2]
