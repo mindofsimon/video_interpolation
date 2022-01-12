@@ -134,14 +134,14 @@ def testing(model, test_dl, platf, t):
 
 def main():
     # GPU parameters
-    set_gpu(0)
+    set_gpu(1)
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
     set_backend()
     set_seed()
     platf = platform()
     # Model Parameters
     model = S3DG(num_classes=1, num_frames=T)
-    # model.load_state_dict(torch.load(SAVE_PATH))
+    model.load_state_dict(torch.load(SAVE_PATH))
     # model = nn.DataParallel(model)  # just to train faster (multi GPU)
     model.to(platf)
     model.train()

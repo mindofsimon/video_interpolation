@@ -1,10 +1,8 @@
 """
 Save video informations in csv file.
-Set the speed manipulation parameter of the videos, along with the roots in which original videos are stored.
-
-Each line of the csv contains:
-    video path, video label (original = 0, manipulated = 1), video smp (if video is original is set to 1).
-    train/test/validation videos will contain just original videos (sped-up versions will be created during training).
+Each line of the csv contains the path to the video file.
+All of the videos are original videos, manipulated (sped up) videos will be created at runtime during training)
+Rememmber to set the root directories for the original files.
 """
 
 import csv
@@ -13,7 +11,6 @@ import cv2
 
 
 # FOR SPEEDNET (KINETICS VIDEOS)
-smp = 2
 total_files = 100000  # then 90% will be used for training, 10% both for test and validation
 
 # TRAIN
@@ -29,7 +26,7 @@ with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/train.csv
         if v.endswith('.mp4'):
             cap = cv2.VideoCapture(originals_root + v)
             if cap.isOpened():
-                videos_writer.writerow([originals_root + v, "0", "1"])
+                videos_writer.writerow([originals_root + v])
                 ok_tra += 1
             else:  # in case the file is corrupted, we skip it
                 skipped_tra += 1
@@ -47,7 +44,7 @@ with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/test.csv'
         if v.endswith('.mp4'):
             cap = cv2.VideoCapture(originals_root + v)
             if cap.isOpened():
-                videos_writer.writerow([originals_root + v, "0", "1"])
+                videos_writer.writerow([originals_root + v])
                 ok_tes += 1
             else:  # in case the file is corrupted, we skip it
                 skipped_tes += 1
@@ -66,7 +63,7 @@ with open('/nas/home/smariani/video_interpolation/datasets/kinetics400/validatio
         if v.endswith('.mp4'):
             cap = cv2.VideoCapture(originals_root + v)
             if cap.isOpened():
-                videos_writer.writerow([originals_root + v, "0", "1"])
+                videos_writer.writerow([originals_root + v])
                 ok_val += 1
             else:  # in case the file is corrupted, we skip it
                 skipped_val += 1

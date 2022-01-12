@@ -10,7 +10,7 @@ from torch_utils import *
 T = 16  # frame number
 
 # GPU parameters
-set_gpu(0)
+set_gpu(1)
 set_backend()
 set_seed()
 platf = platform()

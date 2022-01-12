@@ -21,7 +21,7 @@ class VideoDataset(Dataset):
         with open(csv_path, 'r') as videos:
             data = csv.reader(videos, delimiter=',')
             for row in data:
-                self.samples.append((row[0], row[1], row[2]))
+                self.samples.append((row[0]))
 
     def __len__(self):
         """

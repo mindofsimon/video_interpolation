@@ -211,7 +211,7 @@ def train_data_processing(batch, t):
              skip flag indicates if a file has less frames than the number used for training.
     """
 
-    video_path, _, _ = batch
+    video_path = batch
     video_path = video_path[0]
     video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
     # building input tensor
@@ -231,7 +231,7 @@ def test_val_data_processing(batch, n, t):
              skip flag indicates if a file has less frames than the number used for testing/validating.
     """
 
-    video_path, _, _ = batch
+    video_path = batch
     video_path = video_path[0]
     video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
     frames_list_1, frames_list_2 = preprocess_test_val_video(video_path, n, t)
