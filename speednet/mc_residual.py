@@ -1,4 +1,7 @@
-# Code to Perform Block Matching
+"""
+Code to implement motion compensated residuals by block matching.
+For more details : https://github.com/gautamo/BlockMatching.
+"""
 
 import numpy as np
 import cv2
@@ -178,6 +181,13 @@ def getResidual(target, predicted):
 
 
 def preprocess(anchor, target, blockSize):
+    """
+    Preprocessing chain
+    :param anchor: anchor frame
+    :param target: target frame
+    :param blockSize: size of block used by block matching
+    :return: anchor and target preprocessed frames
+    """
 
     if isinstance(anchor, str) and isinstance(target, str):
         anchorFrame = BGR2YCrCb(cv2.imread(anchor))[:, :, 0]  # get luma component
@@ -214,6 +224,11 @@ def mc_residual(anchorFrame, targetFrame, blockSize = 16):
 
 
 def extract_frames(video_path):
+    """
+    Extracting frames (matrices...) of a given video
+    :param video_path: video file path
+    :return: frames list
+    """
     frame_list = []
     cap = cv2.VideoCapture(video_path)
     success, frame = cap.read()
@@ -225,6 +240,11 @@ def extract_frames(video_path):
 
 
 def get_frame_type_list(video_path):
+    """
+    Get the list of frame types (I/P/B) of a given video.
+    :param video_path: video file path
+    :return: list of frame types
+    """
     f_type_list = []  # to be filled with frame types (I/B/P)
 
     # ffprobe command
@@ -245,6 +265,11 @@ def get_frame_type_list(video_path):
 
 
 def get_residual_sequence(vid):
+    """
+    Get residual (motion compensated) sequence from a given video.
+    :param vid: video file path
+    :return: residual sequence
+    """
     residuals_sequence = []
     frame_types = get_frame_type_list(vid)
     frame_list = extract_frames(vid)
