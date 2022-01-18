@@ -8,11 +8,12 @@ N_FRAMES (temporal dimension) is set to 64.
 HEIGHT = WIDTH = N.
 For test and validation videos N (spatial dimension) is set to 224.
 For train videos N (spatial dimension) is set to a random int between 64 and 336.
-BATCH SIZE is always 2 (we train/test/validate with a double batch composed by an original video and its manipulated version)
+BATCH SIZE is always 2 (we train/test/validate with a double batch composed by an original video and its
+manipulated version).
 
 Input videos are loaded through data loaders (check load_data.py and speednet_utils.py for more details).
 """
-import torch
+
 import torch.nn as nn
 import torch.optim as optim
 from s3dg_torch import S3DG
@@ -72,7 +73,7 @@ def validating(criterion, model, valid_dl, platf):
     n_skipped = 0  # to count the number of skipped videos (due to low number of frames)
     with torch.no_grad():
         for batch in tqdm(valid_dl, total=len(valid_dl), desc='validating'):
-            data, video_labels, skip = test_val_data_processing(batch, N, T)
+            data, video_labels, skip = val_data_processing(batch, N, T)
             if not skip:
                 # moving data to platform
                 data = data.to(platf)
@@ -111,7 +112,7 @@ def testing(model, test_dl, platf, t):
 
     with torch.no_grad():
         for batch in tqdm(test_dl, total=len(test_dl), desc='testing'):
-            data, video_labels, skip = test_val_data_processing(batch, N, t)
+            data, video_labels, skip = test_data_processing(batch, N, t)
             if not skip:
                 # moving data to platform
                 data = data.to(platf)
@@ -134,7 +135,7 @@ def testing(model, test_dl, platf, t):
 
 def main():
     # GPU parameters
-    set_gpu(1)
+    set_gpu(0)
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
     set_backend()
     set_seed()
@@ -148,7 +149,7 @@ def main():
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-02)
     lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, mode='min', verbose=True)
-    epochs = 1
+    epochs = 10
     best_acc = 0
     no_improvement = 0     # n of epochs with no improvements
     patience = 5          # max n of epoch with no improvements

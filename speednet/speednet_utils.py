@@ -2,7 +2,7 @@
 Utils for SpeedNet.
 Including preprocessing steps for training/test/validation, data loading and output metrics.
 """
-
+import os.path
 import random
 import cv2
 from torch.utils.data import DataLoader
@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import numpy as np
+from dense_optical_flow import of
 
 
 def print_eval_metrics(test_labels, predictions_list, true_positives, total):
@@ -40,11 +41,12 @@ def print_eval_metrics(test_labels, predictions_list, true_positives, total):
 
 def load_data():
     """
-    Loading data from csv files (path, label, speed manipulation parameter) to VideoDataset class.
+    Loading data from csv files (path) to VideoDataset class.
     Then from VideoDataset class into DataLoaders.
 
-    All videos are loaded in single batch (containing: video path, video label, video smp).
-    Train/Test/Validation videos dataloaders will contain just original videos (2x speed version will be created during training phase)
+    All videos are loaded in single batch (containing: video path).
+    Train/Test/Validation videos dataloaders will contain just original videos (interpolated video will be loaded at
+    runtime, it has the same filename of the original but it's placed in a different folder).
 
     Be careful to put in originals csv the path to the video info csv files!
 
@@ -124,119 +126,82 @@ def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
     return resized
 
 
-def preprocess_train_video(vid, n, t):
-    """
-    Preprocessing operations applied to train videos.
-    Also the 2x speed version of the original video is created by subsampling video frames.
-    Spatial and temporal augmentations are applied.
-    :param vid: input video
-    :param t: temporal dimension (number of consecutive frames to take)
-    :param n: spatial dimension (random number in range (64, 336))
-    :return: two lists of t consecutive preprocessed frames (one for normal speed, one for 2x speed)
-    """
-
-    f_list = []  # containing original video frames
-    cap = cv2.VideoCapture(vid)
-    success, frame = cap.read()
-    i = 0
-    while success and i < (3*t):  # extracting 3*t frames (if video has less than 3*t frames we extract them all)
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # spatial augmentation (resizing image to n x n)
-        frame_rgb = cv2.resize(frame_rgb, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
-        f_list.append(frame_rgb/255)
-        i += 1
-        success, frame = cap.read()
-
-    # temporal augmentation (sampling frames at different skip probabilities to create normal and sped-up video)
-    factor_1 = round(random.uniform(1.0, 1.2), 2)
-    prob_1 = 1 - (1 / factor_1)
-    factor_2 = round(random.uniform(1.7, 2.2), 2)
-    prob_2 = 1 - (1 / factor_2)
-    random_numbers = np.random.uniform(0, 1, len(f_list))
-    valid_frames_1 = np.where(random_numbers > prob_1)
-    valid_frames_2 = np.where(random_numbers > prob_2)
-
-    f_list_1 = np.array(f_list)
-    f_list_2 = np.array(f_list)
-    f_list_1 = f_list_1[valid_frames_1]  # normal speed
-    f_list_2 = f_list_2[valid_frames_2]  # 2x speed
-
-    # taking t frames only
-    f_list_1 = list(f_list_1)
-    f_list_2 = list(f_list_2)
-    f_list_1 = f_list_1[0:t]
-    f_list_2 = f_list_2[0:t]
-    return f_list_1, f_list_2
-
-
-def preprocess_test_val_video(vid, n, t):
-    """
-    Preprocessing operations applied to test and validation videos.
-    Also the 2x speed version of the original video is created by subsampling video frames.
-    No spatial and temporal augmentations.
-    Image is resized to 224 pixels on the height maintaining ratio.
-    Center cropping 224x224 is then applied.
-    :param vid: input video
-    :param n: spatial dimension (224)
-    :param t: temporal dimension (number of consecutive frames to take)
-    :return: two lists of t consecutive preprocessed frames (one for normal speed, one for 2x speed)
-    """
-
-    f_list_1 = []
-    cap = cv2.VideoCapture(vid)
-    success, frame = cap.read()
-    i = 0
-    while success and i < (3*t):
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        res_frame_rgb = image_resize(frame_rgb, height=n)
-        if res_frame_rgb.shape[1] < n:  # in case width is lower than 224 pixels, we resize it to 224
-            res_frame_rgb = cv2.resize(res_frame_rgb, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
-        crop_frame_rgb = center_crop(res_frame_rgb)
-        f_list_1.append(crop_frame_rgb/255)
-        i += 1
-        success, frame = cap.read()
-
-    f_list_2 = f_list_1[::2]
-    f_list_2 = f_list_2[0:t]  # taking only T frames
-    f_list_1 = f_list_1[0:t]  # taking only T frames
-    return f_list_1, f_list_2
-
-
 def train_data_processing(batch, t):
     """
     Data processing chain for train videos.
     From video path to input (to the model) tensor.
-    :param batch: batch containing video path, video label and video smp
+    :param batch: batch containing original video path
     :param t: temporal dimension (frame number)
     :return: input to the model(data, with batch size = 2), video labels, and skip flag.
+             the input to the model are original and interpolated videos (t frames each of size n x n, processed with
+             optical flow).
              skip flag indicates if a file has less frames than the number used for training.
     """
 
+    # extracting data
     video_path = batch
     video_path = video_path[0]
     video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
-    # building input tensor
     n = random.randrange(64, 336)  # should be between 64 and 336 but it depends on gpu memory limit...
-    frames_list_1, frames_list_2 = preprocess_train_video(video_path, n, t)
-    data, skip_file = generate_data(frames_list_1, frames_list_2, n, t)
+    interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate_60fps/train/" \
+                        + os.path.basename(video_path)
+    # optical flow (will also keep just t frames and resize them to n x n)
+    original_of = of(video_path, n, t)
+    interp_of = of(interpolated_path, n, t)
+    # building input tensor
+    data, skip_file = generate_data(original_of, interp_of, n, t)
     return data, video_labels, skip_file
 
 
-def test_val_data_processing(batch, n, t):
+def val_data_processing(batch, n, t):
     """
     Data processing chain for test and validation videos.
-    :param batch: batch containing video path, video label and video smp
+    :param batch: batch containing original video path
     :param n: spatial dimension (frame size)
     :param t: temporal dimension (frame number)
     :return: input to the model(data, with batch size = 2), video label and skip flag.
+             the input to the model are original and interpolated videos (t frames each of size n x n, processed with
+             optical flow).
              skip flag indicates if a file has less frames than the number used for testing/validating.
     """
 
+    # extracting data
     video_path = batch
     video_path = video_path[0]
     video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
-    frames_list_1, frames_list_2 = preprocess_test_val_video(video_path, n, t)
-    data, skip_file = generate_data(frames_list_1, frames_list_2, n, t)
+    interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate_60fps/validation/" \
+                        + os.path.basename(video_path)
+    # optical flow (will also keep just t frames and resize them to n x n)
+    original_of = of(video_path, n, t)
+    interp_of = of(interpolated_path, n, t)
+    # building input tensor
+    data, skip_file = generate_data(original_of, interp_of, n, t)
+    return data, video_labels, skip_file
+
+
+def test_data_processing(batch, n, t):
+    """
+    Data processing chain for test  videos.
+    :param batch: batch containing original video path
+    :param n: spatial dimension (frame size)
+    :param t: temporal dimension (frame number)
+    :return: input to the model(data, with batch size = 2), video label and skip flag.
+             the input to the model are original and interpolated videos (t frames each of size n x n, processed with
+             optical flow).
+             skip flag indicates if a file has less frames than the number used for testing/validating.
+    """
+
+    # extracting data
+    video_path = batch
+    video_path = video_path[0]
+    video_labels = torch.tensor([[0.0], [1.0]])  # original, sped-up
+    interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate_60fps/test/" \
+                        + os.path.basename(video_path)
+    # optical flow (will also keep just t frames and resize them to n x n)
+    original_of = of(video_path, n, t)
+    interp_of = of(interpolated_path, n, t)
+    # building input tensor
+    data, skip_file = generate_data(original_of, interp_of, n, t)
     return data, video_labels, skip_file
 
 
@@ -245,8 +210,8 @@ def generate_data(f_list_1, f_list_2, n, t):
     Generate tensor as input for the model.
     Starts from the frames lists of normal and 2x speed videos.
     Produces tensor of size [BATCH_SIZE(2), N_CHANNELS(3), N_FRAMES(t), HEIGHT(n), WIDTH(n)]
-    :param f_list_1: frame list of original video
-    :param f_list_2: frame list of sped up video
+    :param f_list_1: frame list of original video with optical flow
+    :param f_list_2: frame list of interpolated video with optical flow
     :param t: number of consecutive taken frames (temporal dimension)
     :param n: size of the frames (spatial dimension)
     :return: input tensor to feed the model and skip flag (if video has too low number of frames and has to be skipped)
