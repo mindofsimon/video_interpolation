@@ -12,48 +12,46 @@ from functools import partial
 from concurrent.futures import ThreadPoolExecutor
 
 
-def generate_video(path, interp, output_root):
+def generate_video(filename, interp,  input_root, output_root):
     """
     Function to generate the video.
-    :param path: path to the video to interpolate
+    :param filename: name of the input video file
     :param interp: interpolation parameter (output fps)
-    :param output_root: output file path (where to save it)
+    :param input_root: input file directory (where to get it)
+    :param output_root: output file directory (where to save it)
     :return: nothing
     """
-    filename = os.path.basename(path)
-    output_folder = output_root + str(interp) + 'fps_minterpolate/' + filename
+    output_path = output_root + filename
+    input_path = input_root + filename
     (
         ffmpeg
-            .input(path)
+            .input(input_path)
             .filter('minterpolate', fps=str(interp), mi_mode='mci')
-            .output(output_folder)
+            .output(output_path)
             .global_args('-loglevel', 'quiet')  # just not to print ffmpeg header
             .run()
     )
 
 
 def main():
-    # Folder parameters (put paths to original and manipulated train/test videos
-    # be careful to set the right paths
-    root = ''
-    out_root = root+'/output/'
-    video_root = root+'/videos/'
-    output_video_root = out_root+'/out_videos/'
+    operations = ['test', 'validation', 'train']
 
-    # Ffmpeg params
-    ffmpeg_interp_list = [15, 45, 60]
-
-    # Retrieve video list
-    video_path_list = []
-    for path in os.listdir(video_root):
-        video_path_list.append(video_root+path)
+    # Interpolation Factor
+    i_fact = 60
 
     # Run ffmpeg on each video
-    for interp in ffmpeg_interp_list:
-        print("INTERPOLATION FACTOR: " + str(interp))
-        generate_video_partial = partial(generate_video, interp=interp, output_root=output_video_root)
-        with ThreadPoolExecutor(2) as p:
-            results_mthread = list(tqdm(p.map(generate_video_partial, video_path_list), total=len(video_path_list), desc='Multi-threading'))
+    for op in operations:
+        video_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/originals_temp/'
+        output_video_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate_60fps/'
+        video_root = video_root + op + "/"
+        output_video_root = output_video_root + op + "/"
+        # Retrieve video list
+        video_path_list = [v for v in os.listdir(video_root)]
+        print("INTERPOLATION FACTOR: " + str(i_fact))
+        video_root = video_root
+        generate_video_partial = partial(generate_video, interp=i_fact, input_root=video_root, output_root=output_video_root)
+        with ThreadPoolExecutor(16) as p:
+            results_mthread = list(tqdm(p.map(generate_video_partial, video_path_list), total=len(video_path_list), desc='FFMPEG [minterpolate] multi-thread'))
 
 
 if __name__ == '__main__':
