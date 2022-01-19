@@ -30,12 +30,12 @@ def split_vid(filename, input_root, output_root):
 
 def main():
     video_root = '/nas/home/pbestagini/kinetics/k400/train/'
-    output_video_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/originals/train/'
+    output_video_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/originals_temp/train/'
 
     # Retrieve video list
-    total_files = 5000
+    total_files = 10000
     video_path_list = [v for v in os.listdir(video_root) if v.endswith('.mp4')]
-    video_path_list = video_path_list[0:0 + int(total_files * 0.9)]
+    video_path_list = video_path_list[10000:10000 + int(total_files * 0.9)]
     for v in video_path_list:
         cap = cv2.VideoCapture(video_root + v)
         if not cap.isOpened():
