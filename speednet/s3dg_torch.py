@@ -400,7 +400,7 @@ class Mixed_5c(nn.Module):
 
 class S3DG(nn.Module):
 
-    def __init__(self, num_classes=1, input_channel=3, num_frames=32):
+    def __init__(self, num_classes=1, input_channel=3, num_frames=64):
         super(S3DG, self).__init__()
         self.features = nn.Sequential(
             STConv3d(input_channel, 64, kernel_size=7, stride=2, padding=3),

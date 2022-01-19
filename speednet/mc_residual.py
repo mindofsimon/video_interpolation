@@ -223,66 +223,38 @@ def mc_residual(anchorFrame, targetFrame, blockSize = 16):
     return residualFrame
 
 
-def extract_frames(video_path):
+def extract_frames(video_path, n, t):
     """
-    Extracting frames (matrices...) of a given video
+    Extracting t frames (matrices...) of a given video (frames are also resized to a n x n spatial dimension),
     :param video_path: video file path
+    :param n: resizing each frame to n x n spatial dimension
+    :param t: number of frames to extract
     :return: frames list
     """
     frame_list = []
     cap = cv2.VideoCapture(video_path)
     success, frame = cap.read()
-    while success:
+    i = 0
+    while success and i < t:
         frame_list.append(frame)
         success, frame = cap.read()
+        i += 1
 
     return frame_list
 
 
-def get_frame_type_list(video_path):
+def get_mc_residuals(vid, n, t):
     """
-    Get the list of frame types (I/P/B) of a given video.
-    :param video_path: video file path
-    :return: list of frame types
-    """
-    f_type_list = []  # to be filled with frame types (I/B/P)
-
-    # ffprobe command
-    out = ffmpy.FFprobe(
-        inputs={video_path: None},
-        global_options=[
-            '-v', 'quiet',
-            '-print_format', 'json',
-            '-select_streams', 'v:0',
-            '-show_entries', 'frame=pict_type']
-    ).run(stdout=subprocess.PIPE)
-
-    command_out = json.loads(out[0].decode('utf-8'))
-    for frame in command_out['frames']:
-        f_type_list.append(frame['pict_type'])
-
-    return f_type_list
-
-
-def get_residual_sequence(vid):
-    """
-    Get residual (motion compensated) sequence from a given video.
+    Computes motion compensated residual sequence from a given video.
+    Only t video frames are taken in account, they are also resized to a n x n spatial dimension.
     :param vid: video file path
-    :return: residual sequence
+    :param n: resizing each frame to n x n spatial dimension
+    :param t: number of frames to extract
+    :return: motion compensated residual sequence
     """
     residuals_sequence = []
-    frame_types = get_frame_type_list(vid)
-    frame_list = extract_frames(vid)
-    i_frame_index_list = np.where(np.array(frame_types) == "I")[0]
-    i_frame_index_list = list(i_frame_index_list)
-    for i in i_frame_index_list:
-        j = i + 1
-        while j < len(frame_types) and frame_types[j] != "I":
-            anchor_frame = frame_list[i]
-            target_frame = frame_list[j]
-            res = mc_residual(anchor_frame, target_frame)
-            # res = res/255
-            residuals_sequence.append(res)
-            j += 1
-
+    frame_list = extract_frames(vid, n, t)
+    for i in range(len(frame_list) - 1):
+        mc_res = mc_residual(frame_list[i], frame_list[i + 1])
+        residuals_sequence.append(mc_res/255)
     return residuals_sequence
