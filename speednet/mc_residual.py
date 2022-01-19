@@ -256,5 +256,7 @@ def get_mc_residuals(vid, n, t):
     frame_list = extract_frames(vid, n, t)
     for i in range(len(frame_list) - 1):
         mc_res = mc_residual(frame_list[i], frame_list[i + 1])
+        # spatial augmentation (resizing image to n x n)
+        mc_res = cv2.resize(mc_res, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
         residuals_sequence.append(mc_res/255)
     return residuals_sequence

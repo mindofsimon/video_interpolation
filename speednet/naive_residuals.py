@@ -20,8 +20,6 @@ def get_naive_residuals(video, n, t):
     i = 0
     while success and i < t:
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        # spatial augmentation (resizing image to n x n)
-        frame_rgb = cv2.resize(frame_rgb, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
         f_list.append(frame_rgb/255)
         success, frame = cap.read()
         i += 1
@@ -30,4 +28,8 @@ def get_naive_residuals(video, n, t):
     list_1 = np.array(f_list[1:])
     list_2 = np.array(f_list[0:-1])
     residuals_sequence = list(abs(list_1 - list_2))
-    return residuals_sequence
+    residuals_sequence_resized = []
+    for r in residuals_sequence:
+        # spatial augmentation (resizing image to n x n)
+        residuals_sequence_resized.append(cv2.resize(r, dsize=(n, n), interpolation=cv2.INTER_NEAREST))
+    return residuals_sequence_resized
