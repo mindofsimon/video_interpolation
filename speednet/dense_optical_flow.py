@@ -7,7 +7,7 @@ import numpy as np
 
 def of(vid, n, t):
     """
-    Applies optical flow to first t video frames.
+    Applies optical flow to first t+1 video frames, in order to have a t frames optical flow sequence.
     Frames are also resized to n x n.
     :param vid: video filename
     :param n: spatial dimension
@@ -43,7 +43,7 @@ def of(vid, n, t):
     # Extracting second frame
     ret, frame = cap.read()
     i = 1
-    while ret and i < t:
+    while ret and i < t+1:
 
         # Converts each frame to grayscale - we previously
         # only converted the first frame to grayscale

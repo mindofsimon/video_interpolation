@@ -223,40 +223,33 @@ def mc_residual(anchorFrame, targetFrame, blockSize = 16):
     return residualFrame
 
 
-def extract_frames(video_path, n, t):
-    """
-    Extracting t frames (matrices...) of a given video (frames are also resized to a n x n spatial dimension),
-    :param video_path: video file path
-    :param n: resizing each frame to n x n spatial dimension
-    :param t: number of frames to extract
-    :return: frames list
-    """
-    frame_list = []
-    cap = cv2.VideoCapture(video_path)
-    success, frame = cap.read()
-    i = 0
-    while success and i < t:
-        frame_list.append(frame)
-        success, frame = cap.read()
-        i += 1
-
-    return frame_list
-
-
 def get_mc_residuals(vid, n, t):
     """
     Computes motion compensated residual sequence from a given video.
-    Only t video frames are taken in account, they are also resized to a n x n spatial dimension.
+    Only t+1 video frames are taken in account, (in order to have t residual frames)
+    they are also resized to a n x n spatial dimension.
     :param vid: video file path
     :param n: resizing each frame to n x n spatial dimension
     :param t: number of frames to extract
     :return: motion compensated residual sequence
     """
-    residuals_sequence = []
-    frame_list = extract_frames(vid, n, t)
-    for i in range(len(frame_list) - 1):
-        mc_res = mc_residual(frame_list[i], frame_list[i + 1])
+    res_seq = []  # residuals sequence
+    cap = cv2.VideoCapture(vid)
+    success, prev_frame = cap.read()
+    prev_frame = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
+    success, actual_frame = cap.read()
+    actual_frame = cv2.cvtColor(actual_frame, cv2.COLOR_BGR2GRAY)
+    i = 1
+    while success and i < t + 1:
+        prev_frame = np.array(prev_frame)
+        actual_frame = np.array(actual_frame)
+        res = mc_residual(prev_frame, actual_frame)
         # spatial augmentation (resizing image to n x n)
-        mc_res = cv2.resize(mc_res, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
-        residuals_sequence.append(mc_res/255)
-    return residuals_sequence
+        res = cv2.resize(res, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
+        res_seq.append(res/255)
+        prev_frame = actual_frame
+        success, actual_frame = cap.read()
+        actual_frame = actual_frame
+        i += 1
+
+    return res_seq
