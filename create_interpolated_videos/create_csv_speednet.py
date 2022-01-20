@@ -12,7 +12,7 @@ import cv2
 from tqdm import tqdm
 
 
-MIN_FRAMES = 64
+MIN_FRAMES = 32
 
 
 def enough_frames(video_path):
