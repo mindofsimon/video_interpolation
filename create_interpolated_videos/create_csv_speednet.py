@@ -25,11 +25,11 @@ def enough_frames(video_path):
     cap = cv2.VideoCapture(video_path)
     success, frame = cap.read()
     i = 0
-    while success and i < MIN_FRAMES:
+    while success and i < MIN_FRAMES + 1:  # so to have a total length of MIN_FRAMES in case of residuals computation
         frame_list.append(frame)
         success, frame = cap.read()
         i += 1
-    if len(frame_list) == MIN_FRAMES:
+    if len(frame_list) == MIN_FRAMES + 1:
         valid = True
     else:
         valid = False
