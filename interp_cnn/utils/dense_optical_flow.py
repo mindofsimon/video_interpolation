@@ -65,7 +65,7 @@ def of(vid, n, t):
 
         # Converts HSV to RGB (BGR) color representation
         rgb_frame_of = cv.cvtColor(mask, cv.COLOR_HSV2BGR)
-        # spatial augmentation (resizing image to n x n)
+        # resizing image to n x n
         rgb_frame_of = cv.resize(rgb_frame_of, dsize=(n, n), interpolation=cv.INTER_NEAREST)
         flow_frames.append(rgb_frame_of/255)
 

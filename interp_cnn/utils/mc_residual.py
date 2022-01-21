@@ -244,7 +244,7 @@ def get_mc_residuals(vid, n, t):
         prev_frame = np.array(prev_frame)
         actual_frame = np.array(actual_frame)
         res = mc_residual(prev_frame, actual_frame)
-        # spatial augmentation (resizing image to n x n)
+        # resizing image to n x n
         res = cv2.resize(res, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
         res_seq.append(res/255)
         prev_frame = actual_frame

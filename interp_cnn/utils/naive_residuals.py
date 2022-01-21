@@ -1,6 +1,4 @@
-import cv2
-import random
-import numpy as np
+from interp_cnn_utils import *
 
 
 def get_naive_residuals(video, n, t):
@@ -26,12 +24,12 @@ def get_naive_residuals(video, n, t):
         prev_frame = np.array(prev_frame)
         actual_frame = np.array(actual_frame)
         res = np.abs(np.subtract(actual_frame, prev_frame))
-        # spatial augmentation (resizing image to n x n)
+        # resizing image to n x n
         res = cv2.resize(res, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
         res_seq.append(res/255)
         prev_frame = actual_frame
         success, actual_frame = cap.read()
-        actual_frame = actual_frame
+        actual_frame = cv2.cvtColor(actual_frame, cv2.COLOR_BGR2GRAY)
         i += 1
 
     return res_seq
