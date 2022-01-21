@@ -22,6 +22,7 @@ def print_eval_metrics(test_labels, predictions_list, true_positives, total, net
     :param predictions_list: predicted label
     :param true_positives: number of true positives
     :param total: total number of predictions
+    :param net_type : name of the used model
     :return: nothing
     """
     # printing confusion matrix and accuracy

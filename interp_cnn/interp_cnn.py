@@ -99,6 +99,7 @@ def testing(model, test_dl, platf, t, net):
     :param test_dl: test data loader
     :param platf : data will be loaded on this platform
     :param t : segment of frames to be tested for each video
+    :param net : name of the used model
     :return: nothing
     """
 
