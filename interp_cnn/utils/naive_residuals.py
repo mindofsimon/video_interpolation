@@ -1,4 +1,5 @@
 from interp_cnn_utils import *
+import cv2
 
 
 def get_naive_residuals(video, n, t):

@@ -2,6 +2,8 @@
 Complete Interpolation CNN implementation.
 Can choose among two models (SPEEDNET or RE_NET).
 It includes Training, Validation and Testing.
+The model is trained to discriminate between original videos and videos interpolated at 60fps (with minterpolate
+filter from FFMPEG, consider that original videos are at 30fps).
 The model takes as input a tensor of size [BATCH_SIZE_MODEL, N_CHANNELS, N_FRAMES (T), HEIGHT (N), WIDTH (N)].
 Input (original) videos are loaded through data loaders (check load_data.py and interp_cnn_utils.py for more details).
 Interpolated videos are loaded at runtime from their folder (they share the same filename as the originals
@@ -10,6 +12,7 @@ Then both videos are processed producing optical flow (or residuals) only on fir
 Resulting frames are then resized to a N x N dimension.
 The data is then sent into the model (speednet or re_net).
 Model is trained with BCE loss with logits.
+You can choose to train on multi GPU and also to continue with a previous training cycle.
 """
 
 import torch.nn as nn
@@ -23,12 +26,17 @@ from tqdm import tqdm
 
 
 # Input Parameters
-BATCH_SIZE_LOAD = 1  # how many original videos are extracted from the dataloaders at a time
-BATCH_SIZE_MODEL = 2 * BATCH_SIZE_LOAD  # how many elements are fed into the model at a time (original + manipulated)
-N_CHANNELS = 3  # number of channels per frame (with optical flow is 3, with residuals is 1)
-T = 32  # frames number
+BATCH_SIZE_LOAD = 16  # how many original videos are extracted from the dataloaders at a time
+BATCH_SIZE_MODEL = 2 * BATCH_SIZE_LOAD  # how many elements are fed into the model at a time (original + interpolated)
+# so in this way we extract BATCH_SIZE_LOAD original videos from the dataloaders at a time.
+# then we load the interpolated version of those extracted videos, so we got a total of 2*BATCH_SIZE_LOAD videos.
+# finally we fed those videos into the model.
+N_CHANNELS = 1  # number of channels per frame (with optical flow is 3, with residuals is 1)
+T = 16  # frames number
 N = 224  # frames size (N x N)
 NET_TYPE = "speednet"  # can be speednet or re_net
+MULTI_GPU_TRAINING = True  # if we want to train with double GPU
+NEW_TRAINING_CYCLE = True  # if a new training starts or instead if we continue from a previous checkpoint
 
 
 def training(optimizer, criterion, model, train_dl, platf):
@@ -81,11 +89,12 @@ def validating(criterion, model, valid_dl, platf):
             logits = model(data)
             # calculating loss
             val_loss += criterion(logits, video_labels).item()
-            manipulation_probs = torch.round(torch.sigmoid(logits))
+            video_classes = torch.round(torch.sigmoid(logits))
+            video_classes = video_classes.tolist()
+            video_classes = np.array(video_classes)
             video_labels = video_labels.tolist()
-            manipulation_probs = np.array(manipulation_probs)
             video_labels = np.array(video_labels)
-            correct = np.sum(manipulation_probs == video_labels)
+            correct += np.sum(video_classes == video_labels)
         val_loss /= (len(valid_dl))
         correct /= (len(valid_dl.dataset) * 2)
         print(f"validation error: \n accuracy: {(100 * correct):>0.1f}%, avg loss: {val_loss:>8f}")
@@ -107,8 +116,8 @@ def testing(model, test_dl, platf, t, net):
     # Accuracy Parameters
     true_positives = 0
     total = 0
-    test_labels = []
-    predictions_list = []
+    all_video_labels = []
+    all_manipulation_probs = []
 
     with torch.no_grad():
         for batch in tqdm(test_dl, total=len(test_dl), desc='testing'):
@@ -118,14 +127,19 @@ def testing(model, test_dl, platf, t, net):
             video_labels = video_labels.to(platf)
             # predicting logits
             logits = model(data)
-            total = total + BATCH_SIZE_MODEL
-            manipulation_probs = torch.round(torch.sigmoid(logits))
+            total += BATCH_SIZE_MODEL
+            video_classes = torch.round(torch.sigmoid(logits))
+            video_classes = video_classes.tolist()
+            flat_list_video_classes = [item for sublist in video_classes for item in sublist]
+            all_video_classes = all_video_classes + flat_list_video_classes
+            video_classes = np.array(video_classes)
             video_labels = video_labels.tolist()
-            manipulation_probs = np.array(manipulation_probs)
+            flat_list_video_labels = [item for sublist in video_labels for item in sublist]
+            all_video_labels = all_video_labels + flat_list_video_labels
             video_labels = np.array(video_labels)
-            true_positives = np.sum(manipulation_probs == video_labels)
+            true_positives += np.sum(video_classes == video_labels)
     # EVALUATION METRICS
-    print_eval_metrics(test_labels, predictions_list, true_positives, total, net)
+    print_eval_metrics(all_video_labels, all_manipulation_probs, true_positives, total, net)
 
 
 def main():
@@ -137,14 +151,21 @@ def main():
         save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/re_net.pth'
         model = ReNet(n_frames=T, spatial_dim=N, in_channels=N_CHANNELS)
     # GPU parameters
-    set_gpu(0)
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
+    if MULTI_GPU_TRAINING:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
+    else:
+        set_gpu(0)
     set_backend()
     set_seed()
     platf = platform()
     # Model Parameters
-    # model.load_state_dict(torch.load(save_path))
-    # model = nn.DataParallel(model)  # just to train faster (multi GPU)
+    if MULTI_GPU_TRAINING:
+        model = nn.DataParallel(model)  # just to train faster (multi GPU)
+        if not NEW_TRAINING_CYCLE:
+            model.load_state_dict({k.replace('module.', ''): v for k, v in torch.load(save_path).items()})
+    else:
+        if not NEW_TRAINING_CYCLE:
+            model.load_state_dict(torch.load(save_path))
     model.to(platf)
     model.train()
     criterion = nn.BCEWithLogitsLoss()

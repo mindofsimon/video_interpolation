@@ -1,16 +1,17 @@
 """
 You can use this function if you want to test the interpolation cnn on a single file.
 """
+
 from interp_cnn import *
-from utils.dense_optical_flow import of
+
 
 # Input Parameters
-BATCH_SIZE_LOAD = 1  # how many original videos are extracted from the dataloaders at a time
-BATCH_SIZE_MODEL = 2 * BATCH_SIZE_LOAD  # how many elements are fed into the model at a time (original + manipulated)
-N_CHANNELS = 3  # number of channels per frame (with optical flow is 3, with residuals is 1)
-T = 32  # frames number
+N_CHANNELS = 1  # number of channels per frame (with optical flow is 3, with residuals is 1)
+T = 16  # frames number
 N = 224  # frames size (N x N)
 NET_TYPE = "speednet"  # can be speednet or re_net
+MULTI_GPU_TRAINING = True  # if model was traied with multi GPU
+MULTI_GPU_TESTING = True  # if we want to test with double GPU
 
 
 def test_video(video):
@@ -20,7 +21,10 @@ def test_video(video):
     :return: 0 if video is original, 1 if video is interpolated
     """
     # GPU parameters
-    set_gpu(0)
+    if MULTI_GPU_TESTING:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
+    else:
+        set_gpu(0)
     set_backend()
     set_seed()
     plat = platform()
@@ -32,12 +36,21 @@ def test_video(video):
     else:  # re_net
         save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/re_net.pth'
         model = ReNet(n_frames=T, spatial_dim=N, in_channels=N_CHANNELS)
-    model.load_state_dict(torch.load(save_path))
+    if MULTI_GPU_TRAINING:
+        model.load_state_dict({k.replace('module.', ''): v for k, v in torch.load(save_path).items()})
+    else:
+        model.load_state_dict(torch.load(save_path))
+    if MULTI_GPU_TESTING:
+        model = nn.DataParallel(model)  # (multi GPU)
     model.to(plat)
     model.eval()
-    preprocessed_video = of(video, N, T)
-    video_tensor = torch.Tensor(preprocessed_video)
-    video_tensor.to(plat)
+    preprocessed_video = get_naive_residuals(video, N, T)
+    preprocessed_video = np.array(preprocessed_video)
+    video_tensor = torch.autograd.Variable(torch.Tensor(preprocessed_video))
+    video_tensor = torch.reshape(video_tensor, (1, T, N, N, N_CHANNELS))
+    video_tensor = torch.permute(video_tensor, [0, 4, 1, 2, 3])
+    video_tensor = video_tensor.float()
+    video_tensor = video_tensor.to(plat)
     logits = model(video_tensor)
-    manip_prob = torch.round(torch.sigmoid(logits)).item()
-    return int(manip_prob)
+    video_class = torch.round(torch.sigmoid(logits)).item()
+    return int(video_class)  # 0: original, 1: interpolated
