@@ -19,6 +19,7 @@ import torch.nn as nn
 import torch.optim as optim
 from networks.speednet_torch import S3DG
 from networks.re_net import ReNet
+from networks.speednet_alt import S3DG_alt
 from interp_cnn_utils import *
 import pandas as pd
 from utils.torch_utils import *
@@ -34,7 +35,7 @@ BATCH_SIZE_MODEL = 2 * BATCH_SIZE_LOAD  # how many elements are fed into the mod
 N_CHANNELS = 1  # number of channels per frame (with optical flow is 3, with residuals is 1)
 T = 16  # frames number
 N = 224  # frames size (N x N)
-NET_TYPE = "speednet"  # can be speednet or re_net
+NET_TYPE = "speednet"  # can be speednet or re_net (or also speednet_alt, an alternative version of S3DG)
 MULTI_GPU_TRAINING = True  # if we want to train with double GPU
 NEW_TRAINING_CYCLE = True  # if a new training starts or instead if we continue from a previous checkpoint
 
@@ -146,10 +147,13 @@ def main():
     # type of net
     if NET_TYPE == 'speednet':
         save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/speednet.pth'
-        model = S3DG(num_classes=1, num_frames=T, input_channel=N_CHANNELS)
-    else:  # re_net
+        model = S3DG(num_classes=1, num_frames=T, input_channels=N_CHANNELS)
+    elif NET_TYPE == 're_net':  # re_net
         save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/re_net.pth'
         model = ReNet(n_frames=T, spatial_dim=N, in_channels=N_CHANNELS)
+    else:  # speednet_alt
+        save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/speednet.pth'
+        model = S3DG_alt(num_classes=1, num_frames=T, input_channels=N_CHANNELS)
     # GPU parameters
     if MULTI_GPU_TRAINING:
         os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
