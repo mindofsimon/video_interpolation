@@ -3,15 +3,17 @@ Dense Optical Flow.
 """
 import cv2 as cv
 import numpy as np
+import albumentations as alb
 
 
-def of(vid, n, t):
+def of(vid, n, t, training):
     """
     Applies optical flow to first t+1 video frames, in order to have a t frames optical flow sequence.
-    Frames are also resized to n x n.
+    Train video frames and Test/Validation video frames are processed in different ways.
     :param vid: video filename
     :param n: spatial dimension
     :param t: temporal dimension
+    :param training: if function is called during training (will apply different processing to frames based on this)
     :return: optical flow frames
     """
 
@@ -25,6 +27,18 @@ def of(vid, n, t):
     # getting the frame, first_frame = the
     # first frame in the entire video sequence
     ret, first_frame = cap.read()
+
+    h, w, c = first_frame.shape
+    if training:
+        frame_proc = alb.Compose([alb.Resize(height=n, width=n)])
+    else:
+        if h < n or w < n:
+            # resizing
+            frame_proc = alb.Compose([alb.Resize(height=n, width=n)])  # just resizing to nxn if video is too small
+        else:
+            ratio = h / w
+            # resizing keeping same ratio and center cropping
+            frame_proc = alb.Compose([alb.Resize(height=n, width=round(n / ratio)), alb.CenterCrop(height=n, width=n)])
 
     # Converts frame to grayscale because we
     # only need the luminance channel for
@@ -65,8 +79,9 @@ def of(vid, n, t):
 
         # Converts HSV to RGB (BGR) color representation
         rgb_frame_of = cv.cvtColor(mask, cv.COLOR_HSV2BGR)
-        # resizing image to n x n
-        rgb_frame_of = cv.resize(rgb_frame_of, dsize=(n, n), interpolation=cv.INTER_NEAREST)
+        # processing frame
+        processed_frame = frame_proc(image=rgb_frame_of)
+        rgb_frame_of = processed_frame["image"]
         flow_frames.append(rgb_frame_of/255)
 
         # Updates previous frame

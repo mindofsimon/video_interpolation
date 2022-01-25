@@ -3,6 +3,7 @@ Utils for Interpolation CNN.
 Including preprocessing steps for training/test/validation, data loading and output metrics.
 """
 import os.path
+import random
 from torch.utils.data import DataLoader
 from utils.load_data import VideoDataset
 from sklearn.metrics import confusion_matrix
@@ -72,12 +73,11 @@ def load_data(b_size):
     return train_data_loader, test_data_loader, valid_data_loader
 
 
-def train_data_processing(batch, n, t, c):
+def train_data_processing(batch, t, c):
     """
     Data processing chain for train videos.
     From video path to input (to the model) tensor.
     :param batch: batch containing original video path
-    :param n: spatial dimension (frame size)
     :param t: temporal dimension (frame number)
     :param c: number of channels (for each frame)
     :return: input to the model(data, with batch size = BATCH_SIZE MODEL) and video labels.
@@ -87,7 +87,8 @@ def train_data_processing(batch, n, t, c):
 
     video_labels = []
     video_frames = []
-    # n = random.randrange(64, 336)  # should be between 64 and 336 but it depends on gpu memory limit...
+    # spatial augmentation parameter
+    n = random.randrange(64, 336)  # should be between 64 and 336 but it depends on gpu memory limit...
     # extracting data
     for v in batch:
         video_path = v
@@ -96,8 +97,8 @@ def train_data_processing(batch, n, t, c):
         interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate_60fps/train/" \
                             + os.path.basename(video_path)
         # optical flow (will also keep just t frames and resize them to n x n)
-        original_of = get_naive_residuals(video_path, n, t)
-        interp_of = get_naive_residuals(interpolated_path, n, t)
+        original_of = get_naive_residuals(video_path, n, t, training=True)
+        interp_of = get_naive_residuals(interpolated_path, n, t, training=True)
         video_frames.append(original_of)
         video_frames.append(interp_of)
     # building input tensor
@@ -128,8 +129,8 @@ def val_data_processing(batch, n, t, c):
         interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate_60fps/validation/" \
                             + os.path.basename(video_path)
         # optical flow (will also keep just t frames and resize them to n x n)
-        original_of = get_naive_residuals(video_path, n, t)
-        interp_of = get_naive_residuals(interpolated_path, n, t)
+        original_of = get_naive_residuals(video_path, n, t, training=False)
+        interp_of = get_naive_residuals(interpolated_path, n, t, training=False)
         video_frames.append(original_of)
         video_frames.append(interp_of)
     # building input tensor
@@ -160,8 +161,8 @@ def test_data_processing(batch, n, t, c):
         interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate_60fps/test/" \
                             + os.path.basename(video_path)
         # optical flow (will also keep just t frames and resize them to n x n)
-        original_of = get_naive_residuals(video_path, n, t)
-        interp_of = get_naive_residuals(interpolated_path, n, t)
+        original_of = get_naive_residuals(video_path, n, t, training=False)
+        interp_of = get_naive_residuals(interpolated_path, n, t, training=False)
         video_frames.append(original_of)
         video_frames.append(interp_of)
     # building input tensor

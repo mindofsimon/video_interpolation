@@ -2,14 +2,14 @@
 Complete Interpolation CNN implementation.
 Can choose among two models (SPEEDNET or RE_NET).
 It includes Training, Validation and Testing.
-The model is trained to discriminate between original videos and videos interpolated at 60fps (with minterpolate
+The model is trained to discriminate between original videos and videos interpolated at 60/50/40fps (with minterpolate
 filter from FFMPEG, consider that original videos are at 30fps).
 The model takes as input a tensor of size [BATCH_SIZE_MODEL, N_CHANNELS, N_FRAMES (T), HEIGHT (N), WIDTH (N)].
 Input (original) videos are loaded through data loaders (check load_data.py and interp_cnn_utils.py for more details).
 Interpolated videos are loaded at runtime from their folder (they share the same filename as the originals
 but they are placed in a different folder).
 Then both videos are processed producing optical flow (or residuals) only on first T frames.
-Resulting frames are then resized to a N x N dimension.
+Resulting frames are then resized to a N x N dimension (random in training).
 The data is then sent into the model (speednet or re_net).
 Model is trained with BCE loss with logits.
 You can choose to train on multi GPU and also to continue with a previous training cycle.
@@ -52,7 +52,7 @@ def training(optimizer, criterion, model, train_dl, platf):
     """
 
     for batch in tqdm(train_dl, total=len(train_dl), desc='training'):
-        data, video_labels = train_data_processing(batch, N, T, N_CHANNELS)
+        data, video_labels = train_data_processing(batch, T, N_CHANNELS)
         # moving data to platform
         data = data.to(platf)
         video_labels = video_labels.to(platf)

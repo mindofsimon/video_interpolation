@@ -8,6 +8,7 @@ import cv2
 import ffmpy
 import subprocess
 import json
+import albumentations as alb
 
 
 debug = False
@@ -223,7 +224,7 @@ def mc_residual(anchorFrame, targetFrame, blockSize = 16):
     return residualFrame
 
 
-def get_mc_residuals(vid, n, t):
+def get_mc_residuals(vid, n, t, training):
     """
     Computes motion compensated residual sequence from a given video.
     Only t+1 video frames are taken in account, (in order to have t residual frames)
@@ -231,12 +232,25 @@ def get_mc_residuals(vid, n, t):
     :param vid: video file path
     :param n: resizing each frame to n x n spatial dimension
     :param t: number of frames to extract
+    :param training: if function is called during training (will apply different processing to frames based on this)
     :return: motion compensated residual sequence
     """
+
     res_seq = []  # residuals sequence
     cap = cv2.VideoCapture(vid)
     success, prev_frame = cap.read()
     prev_frame = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
+    h, w, c = prev_frame.shape
+    if training:
+        frame_proc = alb.Compose([alb.Resize(height=n, width=n)])
+    else:
+        if h < n or w < n:
+            # resizing
+            frame_proc = alb.Compose([alb.Resize(height=n, width=n)])  # just resizing to nxn if video is too small
+        else:
+            ratio = h/w
+            # resizing keeping same ratio and center cropping
+            frame_proc = alb.Compose([alb.Resize(height=n, width=round(n/ratio)), alb.CenterCrop(height=n, width=n)])
     success, actual_frame = cap.read()
     actual_frame = cv2.cvtColor(actual_frame, cv2.COLOR_BGR2GRAY)
     i = 1
@@ -244,8 +258,9 @@ def get_mc_residuals(vid, n, t):
         prev_frame = np.array(prev_frame)
         actual_frame = np.array(actual_frame)
         res = mc_residual(prev_frame, actual_frame)
-        # resizing image to n x n
-        res = cv2.resize(res, dsize=(n, n), interpolation=cv2.INTER_NEAREST)
+        # processing frame
+        processed_frame = frame_proc(image=res)
+        res = processed_frame["image"]
         res_seq.append(res/255)
         prev_frame = actual_frame
         success, actual_frame = cap.read()
