@@ -42,7 +42,7 @@ def main():
     # Run ffmpeg on each video
     for op in operations:
         video_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/originals_temp/'
-        output_video_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate_60fps/'
+        output_video_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate/'
         video_root = video_root + op + "/"
         output_video_root = output_video_root + op + "/"
         # Retrieve video list
