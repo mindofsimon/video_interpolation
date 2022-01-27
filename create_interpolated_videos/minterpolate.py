@@ -36,9 +36,6 @@ def generate_video(filename, interp,  input_root, output_root):
 def main():
     operations = ['test', 'validation', 'train']
 
-    # Interpolation Factor
-    i_fact = 60
-
     # Run ffmpeg on each video
     for op in operations:
         video_root = '/nas/home/smariani/video_interpolation/datasets/kinetics400/originals_temp/'
@@ -47,11 +44,20 @@ def main():
         output_video_root = output_video_root + op + "/"
         # Retrieve video list
         video_path_list = [v for v in os.listdir(video_root)]
-        print("INTERPOLATION FACTOR: " + str(i_fact))
-        video_root = video_root
-        generate_video_partial = partial(generate_video, interp=i_fact, input_root=video_root, output_root=output_video_root)
-        with ThreadPoolExecutor(16) as p:
-            results_mthread = list(tqdm(p.map(generate_video_partial, video_path_list), total=len(video_path_list), desc='FFMPEG [minterpolate] multi-thread'))
+        video_path_list = sorted(video_path_list)
+        total_elements = len(video_path_list)
+        first_part = video_path_list[0:int(total_elements/3)]
+        second_part = video_path_list[int(total_elements/3):int(2*total_elements/3)]
+        third_part = video_path_list[int(2*total_elements/3):]
+        generate_video_partial_1 = partial(generate_video, interp=60, input_root=video_root, output_root=output_video_root)
+        with ThreadPoolExecutor(16) as p_1:
+            results_mthread = list(tqdm(p_1.map(generate_video_partial_1, first_part), total=len(first_part), desc='FFMPEG [minterpolate 60fps] multi-thread ' + op.upper()))
+        generate_video_partial_2 = partial(generate_video, interp=50, input_root=video_root, output_root=output_video_root)
+        with ThreadPoolExecutor(16) as p_2:
+            results_mthread = list(tqdm(p_2.map(generate_video_partial_2, second_part), total=len(second_part), desc='FFMPEG [minterpolate 50fps] multi-thread ' + op.upper()))
+        generate_video_partial_3 = partial(generate_video, interp=40, input_root=video_root, output_root=output_video_root)
+        with ThreadPoolExecutor(16) as p_3:
+            results_mthread = list(tqdm(p_3.map(generate_video_partial_3, third_part), total=len(third_part), desc='FFMPEG [minterpolate 40fps] multi-thread ' + op.upper()))
 
 
 if __name__ == '__main__':
