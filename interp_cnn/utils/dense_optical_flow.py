@@ -10,6 +10,12 @@ def of(vid, n, t, training):
     """
     Applies optical flow to first t+1 video frames, in order to have a t frames optical flow sequence.
     Train video frames and Test/Validation video frames are processed in different ways.
+    Train:
+        - each frame is resized to n x n
+    Test/Validation:
+        - each frame is resized to a height of n and a width to keep the same ratio as the original frame
+            - if the obtained width is less than n we resize the frame to n x n
+            - if the obtained width is greater than n we apply a n x n center crop
     :param vid: video filename
     :param n: spatial dimension
     :param t: temporal dimension
@@ -32,13 +38,16 @@ def of(vid, n, t, training):
     if training:
         frame_proc = alb.Compose([alb.Resize(height=n, width=n)])
     else:
+        ratio = h / w
+        # resizing keeping same ratio (height set to 224)
+        frame_proc = alb.Compose([alb.Resize(height=n, width=round(n / ratio))])
+        h, w, c = frame_proc.shape
         if h < n or w < n:
-            # resizing
+            # resizing to 224 x 224 if previous resizement produced a width < 224
             frame_proc = alb.Compose([alb.Resize(height=n, width=n)])  # just resizing to nxn if video is too small
         else:
-            ratio = h / w
-            # resizing keeping same ratio and center cropping
-            frame_proc = alb.Compose([alb.Resize(height=n, width=round(n / ratio)), alb.CenterCrop(height=n, width=n)])
+            # if resized width was ok (>224), center cropping
+            frame_proc = alb.Compose([alb.CenterCrop(height=n, width=n)])
 
     # Converts frame to grayscale because we
     # only need the luminance channel for

@@ -9,7 +9,8 @@ Input (original) videos are loaded through data loaders (check load_data.py and 
 Interpolated videos are loaded at runtime from their folder (they share the same filename as the originals
 but they are placed in a different folder).
 Then both videos are processed producing optical flow (or residuals) only on first T frames.
-Resulting frames are then resized to a N x N dimension (random in training).
+Resulting frames are then resized to a N x N dimension for training (n is random in training), for test/validation
+instead, frames are resized to a height of N and a width in order to keep the same ratio, then a center crop is applied.
 The data is then sent into the model (speednet or re_net).
 Model is trained with BCE loss with logits.
 You can choose to train on multi GPU and also to continue with a previous training cycle.

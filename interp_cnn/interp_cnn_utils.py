@@ -18,10 +18,10 @@ from utils.naive_residuals import get_naive_residuals
 def print_eval_metrics(test_labels, predictions_list, true_positives, total, net_type):
     """
     Printing confusion matrix and accuracy
-    :param test_labels: test video labels
-    :param predictions_list: predicted label
+    :param test_labels: test video labels list
+    :param predictions_list: predicted labels list
     :param true_positives: number of true positives
-    :param total: total number of predictions
+    :param total: total number of total predictions
     :param net_type : name of the used model
     :return: nothing
     """
@@ -44,11 +44,9 @@ def load_data(b_size):
     Loading data from csv files (path) to VideoDataset class.
     Then from VideoDataset class into DataLoaders.
 
-    All videos are loaded in single batch (containing: video path).
+    We load b_size videos at a time (each one containing: video path).
     Train/Test/Validation videos dataloaders will contain just original videos (interpolated video will be loaded at
     runtime, it has the same filename of the original but it's placed in a different folder).
-
-    Be careful to put in originals csv the path to the video info csv files!
 
     :param b_size: how many elements to extract from the data loader at a time.
     :return: three data loaders (one for train videos, one for test videos and one for validation videos).
@@ -76,18 +74,24 @@ def train_data_processing(batch, t, c):
     """
     Data processing chain for train videos.
     From video path to input (to the model) tensor.
+    Chain (for each video in batch):
+        - load original video from dataloader
+        - manually load interpolated video from minterpolate folder
+        - set labels (0.0 original, 1.0 interpolated)
+        - preprocess videos creating residuals (keeping just t frames and resizing them to n x n, n is a random
+          int between 64 and 336, but is the same for all the elements in the same batch)
+        - create input tensor (size: [BATCH_SIZE_MODEL, c, t, n, n]), this tensor will contain BATCH_SIZE_LOAD original
+          videos plus the correspondent interpolated videos (so a total of BATCH_SIZE_MODEL = 2*BATCH_SIZE_LOAD videos).
     :param batch: batch containing original video path
     :param t: temporal dimension (frame number)
     :param c: number of channels (for each frame)
     :return: input to the model(data, with batch size = BATCH_SIZE MODEL) and video labels.
-             the input to the model are original and interpolated videos (t frames each of size n x n, processed with
-             optical flow).
     """
 
-    video_labels = []
-    video_frames = []
     # spatial augmentation parameter
     n = random.randrange(64, 336)  # should be between 64 and 336 but it depends on gpu memory limit...
+    video_labels = []
+    video_frames = []
     # extracting data
     for v in batch:
         video_path = v
@@ -109,13 +113,18 @@ def train_data_processing(batch, t, c):
 def val_data_processing(batch, n, t, c):
     """
     Data processing chain for test and validation videos.
+    Chain (for each video in batch):
+        - load original video from dataloader
+        - manually load interpolated video from minterpolate folder
+        - set labels (0.0 original, 1.0 interpolated)
+        - preprocess videos creating residuals (keeping just t frames and resizing them to n x n, n is equal to 224)
+        - create input tensor (size: [BATCH_SIZE_MODEL, c, t, n, n]), this tensor will contain BATCH_SIZE_LOAD original
+          videos plus the correspondent interpolated videos (so a total of BATCH_SIZE_MODEL = 2*BATCH_SIZE_LOAD videos).
     :param batch: batch containing original video path
     :param n: spatial dimension (frame size)
     :param t: temporal dimension (frame number)
     :param c: number of channels (for each frame)
     :return: input to the model(data, with batch size = BATCH_SIZE_MODEL) and video labels.
-             the input to the model are original and interpolated videos (t frames each of size n x n, processed with
-             optical flow).
     """
 
     video_labels = []
@@ -141,13 +150,18 @@ def val_data_processing(batch, n, t, c):
 def test_data_processing(batch, n, t, c):
     """
     Data processing chain for test  videos.
+    Chain (for each video in batch):
+        - load original video from dataloader
+        - manually load interpolated video from minterpolate folder
+        - set labels (0.0 original, 1.0 interpolated)
+        - preprocess videos creating residuals (keeping just t frames and resizing them to n x n, n is equal to 224)
+        - create input tensor (size: [BATCH_SIZE_MODEL, c, t, n, n]), this tensor will contain BATCH_SIZE_LOAD original
+          videos plus the correspondent interpolated videos (so a total of BATCH_SIZE_MODEL = 2*BATCH_SIZE_LOAD videos).
     :param batch: batch containing original video path
     :param n: spatial dimension (frame size)
     :param t: temporal dimension (frame number)
     :param c: number of channels (for each frame)
     :return: input to the model(data, with batch size = BATCH_SIZE_MODEL) and video labels.
-             the input to the model are original and interpolated videos (t frames each of size n x n, processed with
-             optical flow).
     """
 
     video_labels = []
@@ -174,7 +188,7 @@ def generate_data(f_list, n, t, c):
     """
     Generate tensor as input for the model.
     Starts from the frames lists of the videos ([[original_vid1], [interp_vid1] , [original_vid2], [interp_vid2], ...]).
-    Produces tensor of size [BATCH_SIZE_MODEL, N_CHANNELS(3), N_FRAMES(t), HEIGHT(n), WIDTH(n)]
+    Produces tensor of size [BATCH_SIZE_MODEL, N_CHANNELS, N_FRAMES(t), HEIGHT(n), WIDTH(n)]
     :param f_list: list of the preprocessed video frames (as descripted above)
     :param t: number of consecutive taken frames (temporal dimension)
     :param n: size of the frames (spatial dimension)
