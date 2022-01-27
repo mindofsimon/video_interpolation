@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import numpy as np
-from utils.dense_optical_flow import of
 from utils.naive_residuals import get_naive_residuals
 
 
@@ -94,13 +93,13 @@ def train_data_processing(batch, t, c):
         video_path = v
         video_labels.append([0.0])  # original
         video_labels.append([1.0])  # interpolated
-        interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate_60fps/train/" \
+        interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate/train/" \
                             + os.path.basename(video_path)
-        # optical flow (will also keep just t frames and resize them to n x n)
-        original_of = get_naive_residuals(video_path, n, t, training=True)
-        interp_of = get_naive_residuals(interpolated_path, n, t, training=True)
-        video_frames.append(original_of)
-        video_frames.append(interp_of)
+        # preprocessing operation, [naive residuals] (will also keep just t frames and resize them to n x n)
+        original_preproc = get_naive_residuals(video_path, n, t, training=True)
+        interp_preproc = get_naive_residuals(interpolated_path, n, t, training=True)
+        video_frames.append(original_preproc)
+        video_frames.append(interp_preproc)
     # building input tensor
     video_labels = torch.tensor(video_labels)
     data = generate_data(video_frames, n, t, c)
@@ -126,13 +125,13 @@ def val_data_processing(batch, n, t, c):
         video_path = v
         video_labels.append([0.0])  # original
         video_labels.append([1.0])  # interpolated
-        interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate_60fps/validation/" \
+        interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate/validation/" \
                             + os.path.basename(video_path)
-        # optical flow (will also keep just t frames and resize them to n x n)
-        original_of = get_naive_residuals(video_path, n, t, training=False)
-        interp_of = get_naive_residuals(interpolated_path, n, t, training=False)
-        video_frames.append(original_of)
-        video_frames.append(interp_of)
+        # preprocessing operation, [naive residuals] (will also keep just t frames and resize them to n x n)
+        original_preproc = get_naive_residuals(video_path, n, t, training=False)
+        interp_preproc = get_naive_residuals(interpolated_path, n, t, training=False)
+        video_frames.append(original_preproc)
+        video_frames.append(interp_preproc)
     # building input tensor
     video_labels = torch.tensor(video_labels)
     data = generate_data(video_frames, n, t, c)
@@ -158,13 +157,13 @@ def test_data_processing(batch, n, t, c):
         video_path = v
         video_labels.append([0.0])  # original
         video_labels.append([1.0])  # interpolated
-        interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate_60fps/test/" \
+        interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate/test/" \
                             + os.path.basename(video_path)
-        # optical flow (will also keep just t frames and resize them to n x n)
-        original_of = get_naive_residuals(video_path, n, t, training=False)
-        interp_of = get_naive_residuals(interpolated_path, n, t, training=False)
-        video_frames.append(original_of)
-        video_frames.append(interp_of)
+        # preprocessing operation, [naive residuals] (will also keep just t frames and resize them to n x n)
+        original_preproc = get_naive_residuals(video_path, n, t, training=False)
+        interp_preproc = get_naive_residuals(interpolated_path, n, t, training=False)
+        video_frames.append(original_preproc)
+        video_frames.append(interp_preproc)
     # building input tensor
     video_labels = torch.tensor(video_labels)
     data = generate_data(video_frames, n, t, c)
