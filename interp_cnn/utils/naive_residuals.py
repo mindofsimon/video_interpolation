@@ -26,20 +26,21 @@ def get_naive_residuals(video, n, t, training):
     cap = cv2.VideoCapture(video)
     success, prev_frame = cap.read()
     prev_frame = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
-    h, w, c = prev_frame.shape
+    h, w = prev_frame.shape
     if training:
         frame_proc = alb.Compose([alb.Resize(height=n, width=n)])
     else:
+        # in test and validation we apply a resizement 224 x (224*w/h) and then a 224 x 224 center cropping
+        # if the resizement produces a width < 224, we just resize everything to 224 x 224,
+        # without applying center cropping
         ratio = h / w
-        # resizing keeping same ratio (height set to 224)
-        frame_proc = alb.Compose([alb.Resize(height=n, width=round(n / ratio))])
-        h, w, c = frame_proc.shape
-        if h < n or w < n:
-            # resizing to 224 x 224 if previous resizement produced a width < 224
+        if round(n / ratio) < n:
+            # resizing to 224 x 224 if resizement would produce a width < 224
             frame_proc = alb.Compose([alb.Resize(height=n, width=n)])  # just resizing to nxn if video is too small
         else:
-            # if resized width was ok (>224), center cropping
-            frame_proc = alb.Compose([alb.CenterCrop(height=n, width=n)])
+            # resizing keeping same ratio (height set to 224) and center cropping (224 x 224)
+            # if resized width is ok (>224), center cropping
+            frame_proc = alb.Compose([alb.Resize(height=n, width=round(n / ratio)), alb.CenterCrop(height=n, width=n)])
     success, actual_frame = cap.read()
     actual_frame = cv2.cvtColor(actual_frame, cv2.COLOR_BGR2GRAY)
     i = 1

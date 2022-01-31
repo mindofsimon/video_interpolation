@@ -28,7 +28,7 @@ from tqdm import tqdm
 
 
 # Input Parameters
-BATCH_SIZE_LOAD = 16  # how many original videos are extracted from the dataloaders at a time
+BATCH_SIZE_LOAD = 8  # how many original videos are extracted from the dataloaders at a time
 BATCH_SIZE_MODEL = 2 * BATCH_SIZE_LOAD  # how many elements are fed into the model at a time (original + interpolated)
 # so in this way we extract BATCH_SIZE_LOAD original videos from the dataloaders at a time.
 # then we load the interpolated version of those extracted videos, so we got a total of 2*BATCH_SIZE_LOAD videos.
@@ -118,8 +118,8 @@ def testing(model, test_dl, platf, t, net):
     # Accuracy Parameters
     true_positives = 0
     total = 0
+    all_video_classes = []
     all_video_labels = []
-    all_manipulation_probs = []
 
     with torch.no_grad():
         for batch in tqdm(test_dl, total=len(test_dl), desc='testing'):
@@ -141,7 +141,7 @@ def testing(model, test_dl, platf, t, net):
             video_labels = np.array(video_labels)
             true_positives += np.sum(video_classes == video_labels)
     # EVALUATION METRICS
-    print_eval_metrics(all_video_labels, all_manipulation_probs, true_positives, total, net)
+    print_eval_metrics(all_video_labels, all_video_classes, true_positives, total, net)
 
 
 def main():
@@ -176,10 +176,10 @@ def main():
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-02)
     lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, mode='min', verbose=True)
-    epochs = 10
+    epochs = 15
     best_acc = 0
     no_improvement = 0     # n of epochs with no improvements
-    patience = 5          # max n of epoch with no improvements
+    patience = 7          # max n of epoch with no improvements
     min_val_loss = np.inf
     history = []
 

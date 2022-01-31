@@ -32,7 +32,7 @@ def test_video(video):
     # Model Parameters
     if NET_TYPE == 'speednet':
         save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/speednet.pth'
-        model = S3DG(num_classes=1, num_frames=T, input_channel=N_CHANNELS)
+        model = S3DG(num_classes=1, num_frames=T, input_channels=N_CHANNELS)
     elif NET_TYPE == 're_net':  # re_net
         save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/re_net.pth'
         model = ReNet(n_frames=T, spatial_dim=N, in_channels=N_CHANNELS)

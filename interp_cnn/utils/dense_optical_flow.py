@@ -38,16 +38,17 @@ def of(vid, n, t, training):
     if training:
         frame_proc = alb.Compose([alb.Resize(height=n, width=n)])
     else:
+        # in test and validation we apply a resizement 224 x (224*w/h) and then a 224 x 224 center cropping
+        # if the resizement produces a width < 224, we just resize everything to 224 x 224,
+        # without applying center cropping
         ratio = h / w
-        # resizing keeping same ratio (height set to 224)
-        frame_proc = alb.Compose([alb.Resize(height=n, width=round(n / ratio))])
-        h, w, c = frame_proc.shape
-        if h < n or w < n:
-            # resizing to 224 x 224 if previous resizement produced a width < 224
+        if round(n / ratio) < n:
+            # resizing to 224 x 224 if resizement would produce a width < 224
             frame_proc = alb.Compose([alb.Resize(height=n, width=n)])  # just resizing to nxn if video is too small
         else:
-            # if resized width was ok (>224), center cropping
-            frame_proc = alb.Compose([alb.CenterCrop(height=n, width=n)])
+            # resizing keeping same ratio (height set to 224) and center cropping (224 x 224)
+            # if resized width is ok (>224), center cropping
+            frame_proc = alb.Compose([alb.Resize(height=n, width=round(n / ratio)), alb.CenterCrop(height=n, width=n)])
 
     # Converts frame to grayscale because we
     # only need the luminance channel for
