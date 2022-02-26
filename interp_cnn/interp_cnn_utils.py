@@ -13,16 +13,17 @@ import pandas as pd
 import torch
 import numpy as np
 from utils.naive_residuals import get_naive_residuals
+from utils.original_frames import get_original_frames
+from utils.dense_optical_flow import of
 
 
-def print_eval_metrics(test_labels, predictions_list, true_positives, total, net_type):
+def print_eval_metrics(test_labels, predictions_list, true_positives, total):
     """
     Printing confusion matrix and accuracy
     :param test_labels: test video labels list
     :param predictions_list: predicted labels list
     :param true_positives: number of true positives
     :param total: total number of total predictions
-    :param net_type : name of the used model
     :return: nothing
     """
     # printing confusion matrix and accuracy
@@ -32,8 +33,8 @@ def print_eval_metrics(test_labels, predictions_list, true_positives, total, net
     sn.heatmap(df_cm, annot=True, fmt='d', annot_kws={"size": 16})
     plt.xlabel("Predicted Labels")
     plt.ylabel("True Labels")
-    plt.title("Confusion Matrix (" + net_type.upper() + ")")
-    plt.savefig('/nas/home/smariani/video_interpolation/interp_cnn/eval_metrics/cm_' + net_type + '.png')
+    plt.title("Confusion Matrix (SPEEDNET)")
+    plt.savefig('/nas/home/smariani/video_interpolation/interp_cnn/eval_metrics/cm_speednet.png')
     plt.show()
     accuracy = round(((true_positives / total) * 100), 3)
     print("Accuracy:" + str(accuracy) + "%")
@@ -89,7 +90,8 @@ def train_data_processing(batch, t, c):
     """
 
     # spatial augmentation parameter
-    n = random.randrange(64, 336)  # should be between 64 and 336 but it depends on gpu memory limit...
+    # n = random.randrange(64, 336)  # should be between 64 and 336 but it depends on gpu memory limit...
+    n = random.uniform(0.9, 1.1)  # resaling factor
     video_labels = []
     video_frames = []
     # extracting data
@@ -100,13 +102,14 @@ def train_data_processing(batch, t, c):
         interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate/train/" \
                             + os.path.basename(video_path)
         # preprocessing operation, [naive residuals] (will also keep just t frames and resize them to n x n)
-        original_preproc = get_naive_residuals(video_path, n, t, training=True)
-        interp_preproc = get_naive_residuals(interpolated_path, n, t, training=True)
+        original_preproc = of(video_path, n, t, training=True)
+        interp_preproc = of(interpolated_path, n, t, training=True)
         video_frames.append(original_preproc)
         video_frames.append(interp_preproc)
     # building input tensor
     video_labels = torch.tensor(video_labels)
-    data = generate_data(video_frames, n, t, c)
+    # data = generate_data(video_frames, n, t, c)
+    data = generate_data(video_frames, 224, t, c)
     return data, video_labels
 
 
@@ -137,8 +140,8 @@ def val_data_processing(batch, n, t, c):
         interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate/validation/" \
                             + os.path.basename(video_path)
         # preprocessing operation, [naive residuals] (will also keep just t frames and resize them to n x n)
-        original_preproc = get_naive_residuals(video_path, n, t, training=False)
-        interp_preproc = get_naive_residuals(interpolated_path, n, t, training=False)
+        original_preproc = of(video_path, n, t, training=False)
+        interp_preproc = of(interpolated_path, n, t, training=False)
         video_frames.append(original_preproc)
         video_frames.append(interp_preproc)
     # building input tensor
@@ -174,8 +177,8 @@ def test_data_processing(batch, n, t, c):
         interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate/test/" \
                             + os.path.basename(video_path)
         # preprocessing operation, [naive residuals] (will also keep just t frames and resize them to n x n)
-        original_preproc = get_naive_residuals(video_path, n, t, training=False)
-        interp_preproc = get_naive_residuals(interpolated_path, n, t, training=False)
+        original_preproc = of(video_path, n, t, training=False)
+        interp_preproc = of(interpolated_path, n, t, training=False)
         video_frames.append(original_preproc)
         video_frames.append(interp_preproc)
     # building input tensor

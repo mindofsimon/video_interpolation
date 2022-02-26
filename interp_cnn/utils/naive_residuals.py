@@ -29,6 +29,10 @@ def get_naive_residuals(video, n, t, training):
     h, w = prev_frame.shape
     if training:
         frame_proc = alb.Compose([alb.Resize(height=n, width=n)])
+        #if h*n < 224 or w*n < 224:
+         #   frame_proc = alb.Compose([alb.Resize(height=224, width=224)])
+        #else:
+         #   frame_proc = alb.Compose([alb.Resize(height=int(n*h), width=int(n*w)), alb.CenterCrop(height=224, width=224)])
     else:
         # in test and validation we apply a resizement 224 x (224*w/h) and then a 224 x 224 center cropping
         # if the resizement produces a width < 224, we just resize everything to 224 x 224,
@@ -40,7 +44,11 @@ def get_naive_residuals(video, n, t, training):
         else:
             # resizing keeping same ratio (height set to 224) and center cropping (224 x 224)
             # if resized width is ok (>224), center cropping
-            frame_proc = alb.Compose([alb.Resize(height=n, width=round(n / ratio)), alb.CenterCrop(height=n, width=n)])
+             frame_proc = alb.Compose([alb.Resize(height=n, width=round(n / ratio)), alb.CenterCrop(height=n, width=n)])
+        #if h < 224 or w < 224:
+         #   frame_proc = alb.Compose([alb.Resize(height=224, width=224)])
+        #else:
+         #   frame_proc = alb.Compose([alb.CenterCrop(height=224, width=224)])
     success, actual_frame = cap.read()
     actual_frame = cv2.cvtColor(actual_frame, cv2.COLOR_BGR2GRAY)
     i = 1
@@ -54,7 +62,8 @@ def get_naive_residuals(video, n, t, training):
         res_seq.append(res/255)
         prev_frame = actual_frame
         success, actual_frame = cap.read()
-        actual_frame = cv2.cvtColor(actual_frame, cv2.COLOR_BGR2GRAY)
+        if success:
+            actual_frame = cv2.cvtColor(actual_frame, cv2.COLOR_BGR2GRAY)
         i += 1
 
     return res_seq

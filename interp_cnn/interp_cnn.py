@@ -1,6 +1,5 @@
 """
-Complete Interpolation CNN implementation.
-Can choose among two models (SPEEDNET or RE_NET).
+Complete SpeedNet implementation.
 It includes Training, Validation and Testing.
 The model is trained to discriminate between original videos and videos interpolated at 60/50/40fps (with minterpolate
 filter from FFMPEG, consider that original videos are at 30fps).
@@ -11,7 +10,7 @@ but they are placed in a different folder).
 Then both videos are processed producing optical flow (or residuals) only on first T frames.
 Resulting frames are then resized to a N x N dimension for training (n is random in training), for test/validation
 instead, frames are resized to a height of N and a width in order to keep the same ratio, then a center crop is applied.
-The data is then sent into the model (speednet or re_net).
+The data is then sent into the model.
 Model is trained with BCE loss with logits.
 You can choose to train on multi GPU and also to continue with a previous training cycle.
 """
@@ -19,16 +18,16 @@ You can choose to train on multi GPU and also to continue with a previous traini
 import torch.nn as nn
 import torch.optim as optim
 from networks.speednet_torch import S3DG
-from networks.re_net import ReNet
-from networks.speednet_alt import S3DG_alt
+# from networks.global_speednet_torch import S3DG
 from interp_cnn_utils import *
+# from global_interp_cnn_utils import *
 import pandas as pd
 from utils.torch_utils import *
 from tqdm import tqdm
 
 
 # Input Parameters
-BATCH_SIZE_LOAD = 8  # how many original videos are extracted from the dataloaders at a time
+BATCH_SIZE_LOAD = 16  # how many original videos are extracted from the dataloaders at a time
 BATCH_SIZE_MODEL = 2 * BATCH_SIZE_LOAD  # how many elements are fed into the model at a time (original + interpolated)
 # so in this way we extract BATCH_SIZE_LOAD original videos from the dataloaders at a time.
 # then we load the interpolated version of those extracted videos, so we got a total of 2*BATCH_SIZE_LOAD videos.
@@ -36,7 +35,6 @@ BATCH_SIZE_MODEL = 2 * BATCH_SIZE_LOAD  # how many elements are fed into the mod
 N_CHANNELS = 1  # number of channels per frame (with optical flow is 3, with residuals is 1)
 T = 16  # frames number
 N = 224  # frames size (N x N)
-NET_TYPE = "speednet"  # can be speednet or re_net (or also speednet_alt, an alternative version of S3DG)
 MULTI_GPU_TRAINING = True  # if we want to train with double GPU
 NEW_TRAINING_CYCLE = True  # if a new training starts or instead if we continue from a previous checkpoint
 
@@ -103,14 +101,13 @@ def validating(criterion, model, valid_dl, platf):
     return correct, val_loss
 
 
-def testing(model, test_dl, platf, t, net):
+def testing(model, test_dl, platf, t):
     """
     Test function
     :param model: actual model
     :param test_dl: test data loader
     :param platf : data will be loaded on this platform
     :param t : segment of frames to be tested for each video
-    :param net : name of the used model
     :return: nothing
     """
 
@@ -141,23 +138,15 @@ def testing(model, test_dl, platf, t, net):
             video_labels = np.array(video_labels)
             true_positives += np.sum(video_classes == video_labels)
     # EVALUATION METRICS
-    print_eval_metrics(all_video_labels, all_video_classes, true_positives, total, net)
+    print_eval_metrics(all_video_labels, all_video_classes, true_positives, total)
 
 
 def main():
-    # type of net
-    if NET_TYPE == 'speednet':
-        save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/speednet.pth'
-        model = S3DG(num_classes=1, num_frames=T, input_channels=N_CHANNELS)
-    elif NET_TYPE == 're_net':  # re_net
-        save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/re_net.pth'
-        model = ReNet(n_frames=T, spatial_dim=N, in_channels=N_CHANNELS)
-    else:  # speednet_alt
-        save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/speednet.pth'
-        model = S3DG_alt(num_classes=1, num_frames=T, input_channels=N_CHANNELS)
+    save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/speednet_opticalflow_2.pth'
+    model = S3DG(num_classes=1, num_frames=T, input_channels=N_CHANNELS)
     # GPU parameters
     if MULTI_GPU_TRAINING:
-        os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
+        os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3, 4"
     else:
         set_gpu(0)
     set_backend()
@@ -185,7 +174,7 @@ def main():
 
     # TRAINING
     train_dl, test_dl, valid_dl = load_data(BATCH_SIZE_LOAD)
-    print("TRAINING " + NET_TYPE.upper())
+    print("TRAINING SPEEDNET")
     for e in range(epochs):
         print("EPOCH "+str(e+1))
         model.train()
@@ -194,7 +183,7 @@ def main():
         model.eval()
         correct, val_loss = validating(criterion, model, valid_dl, platf)
         lr_scheduler.step(val_loss)
-        history.append({"epoch": e, "loss": val_loss, "lr": optimizer.param_groups[0]['lr']})
+        history.append({"epoch": e, "accuracy": 100*correct, "loss": val_loss, "lr": optimizer.param_groups[0]['lr']})
         # MODEL CHECKPOINT CALLBACK
         accuracy = correct
         if accuracy > best_acc:
@@ -213,18 +202,18 @@ def main():
             print(f'Early stopped at epoch {e}')
             # Save history for early stopping
             df = pd.DataFrame(history)
-            df.to_csv("/nas/home/smariani/video_interpolation/interp_cnn/eval_metrics/" + NET_TYPE + "_history.csv")
+            df.to_csv("/nas/home/smariani/video_interpolation/interp_cnn/eval_metrics/speednet_opticalflow_2_history.csv")
             break
 
     print("Done!")
     # Save history
     df = pd.DataFrame(history)
-    df.to_csv("/nas/home/smariani/video_interpolation/interp_cnn/eval_metrics/" + NET_TYPE + "_history.csv")
+    df.to_csv("/nas/home/smariani/video_interpolation/interp_cnn/eval_metrics/speednet_opticalflow_2_history.csv")
 
     # TESTING
-    print("TESTING " + NET_TYPE.upper())
+    print("TESTING SPEEDNET")
     model.eval()
-    testing(model, test_dl, platf, T, NET_TYPE)
+    testing(model, test_dl, platf, T)
 
 
 if __name__ == '__main__':
