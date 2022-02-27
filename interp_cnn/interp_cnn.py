@@ -17,17 +17,17 @@ You can choose to train on multi GPU and also to continue with a previous traini
 
 import torch.nn as nn
 import torch.optim as optim
-from networks.speednet_torch import S3DG
-# from networks.global_speednet_torch import S3DG
-from interp_cnn_utils import *
-# from global_interp_cnn_utils import *
+# from networks.speednet_torch import S3DG
+from networks.global_speednet_torch import S3DG
+# from interp_cnn_utils import *
+from global_interp_cnn_utils import *
 import pandas as pd
 from utils.torch_utils import *
 from tqdm import tqdm
 
 
 # Input Parameters
-BATCH_SIZE_LOAD = 16  # how many original videos are extracted from the dataloaders at a time
+BATCH_SIZE_LOAD = 2  # how many original videos are extracted from the dataloaders at a time
 BATCH_SIZE_MODEL = 2 * BATCH_SIZE_LOAD  # how many elements are fed into the model at a time (original + interpolated)
 # so in this way we extract BATCH_SIZE_LOAD original videos from the dataloaders at a time.
 # then we load the interpolated version of those extracted videos, so we got a total of 2*BATCH_SIZE_LOAD videos.
@@ -142,11 +142,11 @@ def testing(model, test_dl, platf, t):
 
 
 def main():
-    save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/speednet_opticalflow_2.pth'
+    save_path = '/nas/home/smariani/video_interpolation/interp_cnn/models/speednet_global_2.pth'
     model = S3DG(num_classes=1, num_frames=T, input_channels=N_CHANNELS)
     # GPU parameters
     if MULTI_GPU_TRAINING:
-        os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3, 4"
+        os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3"
     else:
         set_gpu(0)
     set_backend()
@@ -202,13 +202,13 @@ def main():
             print(f'Early stopped at epoch {e}')
             # Save history for early stopping
             df = pd.DataFrame(history)
-            df.to_csv("/nas/home/smariani/video_interpolation/interp_cnn/eval_metrics/speednet_opticalflow_2_history.csv")
+            df.to_csv("/nas/home/smariani/video_interpolation/interp_cnn/eval_metrics/speednet_global_2_history.csv")
             break
 
     print("Done!")
     # Save history
     df = pd.DataFrame(history)
-    df.to_csv("/nas/home/smariani/video_interpolation/interp_cnn/eval_metrics/speednet_opticalflow_2_history.csv")
+    df.to_csv("/nas/home/smariani/video_interpolation/interp_cnn/eval_metrics/speednet_global_2_history.csv")
 
     # TESTING
     print("TESTING SPEEDNET")

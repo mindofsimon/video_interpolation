@@ -12,9 +12,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import numpy as np
-from utils.naive_residuals import get_naive_residuals
-from utils.original_frames import get_original_frames
-from utils.dense_optical_flow import of
+from utils.global_features import extract_global_features
 
 
 def print_eval_metrics(test_labels, predictions_list, true_positives, total):
@@ -93,9 +91,7 @@ def train_data_processing(batch, t, c):
     # n = random.randrange(64, 336)  # should be between 64 and 336 but it depends on gpu memory limit...
     n = random.uniform(0.9, 1.1)  # resaling factor
     video_labels = []
-    video_frames_1 = []
-    video_frames_2 = []
-    video_frames_3 = []
+    video_features = []
     # extracting data
     for v in batch:
         video_path = v
@@ -104,23 +100,16 @@ def train_data_processing(batch, t, c):
         interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate/train/" \
                             + os.path.basename(video_path)
         # preprocessing operation, [naive residuals] (will also keep just t frames and resize them to n x n)
-        original_frames = get_original_frames(video_path, n, t, training=True)
-        interp_frames = get_original_frames(interpolated_path, n, t, training=True)
-        original_res = get_naive_residuals(video_path, n, t, training=True)
-        interp_res = get_naive_residuals(interpolated_path, n, t, training=True)
-        original_of = of(video_path, n, t, training=True)
-        interp_of = of(interpolated_path, n, t, training=True)
-        video_frames_1.append(original_frames)
-        video_frames_1.append(interp_frames)
-        video_frames_2.append(original_res)
-        video_frames_2.append(interp_res)
-        video_frames_3.append(original_of)
-        video_frames_3.append(interp_of)
+        original_frames, original_res, original_of = extract_global_features(video_path, n, t, training=True)
+        interp_frames, interp_res, interp_of = extract_global_features(interpolated_path, n, t, training=True)
+        original_features = [original_frames, original_res, original_of]
+        interpolated_features = [interp_frames, interp_res, interp_of]
+        video_features.append(original_features)
+        video_features.append(interpolated_features)
     # building input tensor
     video_labels = torch.tensor(video_labels)
-    video_frames = [video_frames_1, video_frames_2, video_frames_3]
     # data = generate_data(video_frames, n, t, c)
-    data = generate_data(video_frames, 224, t, c)
+    data = generate_data(video_features, 224, t, c)
     return data, video_labels
 
 
@@ -142,9 +131,7 @@ def val_data_processing(batch, n, t, c):
     """
 
     video_labels = []
-    video_frames_1 = []
-    video_frames_2 = []
-    video_frames_3 = []
+    video_features = []
     # extracting data
     for v in batch:
         video_path = v
@@ -153,22 +140,15 @@ def val_data_processing(batch, n, t, c):
         interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate/validation/" \
                             + os.path.basename(video_path)
         # preprocessing operation, [naive residuals] (will also keep just t frames and resize them to n x n)
-        original_frames = get_original_frames(video_path, n, t, training=False)
-        interp_frames = get_original_frames(interpolated_path, n, t, training=False)
-        original_res = get_naive_residuals(video_path, n, t, training=False)
-        interp_res = get_naive_residuals(interpolated_path, n, t, training=False)
-        original_of = of(video_path, n, t, training=False)
-        interp_of = of(interpolated_path, n, t, training=False)
-        video_frames_1.append(original_frames)
-        video_frames_1.append(interp_frames)
-        video_frames_2.append(original_res)
-        video_frames_2.append(interp_res)
-        video_frames_3.append(original_of)
-        video_frames_3.append(interp_of)
+        original_frames, original_res, original_of = extract_global_features(video_path, n, t, training=False)
+        interp_frames, interp_res, interp_of = extract_global_features(interpolated_path, n, t, training=False)
+        original_features = [original_frames, original_res, original_of]
+        interpolated_features = [interp_frames, interp_res, interp_of]
+        video_features.append(original_features)
+        video_features.append(interpolated_features)
     # building input tensor
     video_labels = torch.tensor(video_labels)
-    video_frames = [video_frames_1, video_frames_2, video_frames_3]
-    data = generate_data(video_frames, n, t, c)
+    data = generate_data(video_features, n, t, c)
     return data, video_labels
 
 
@@ -190,37 +170,24 @@ def test_data_processing(batch, n, t, c):
     """
 
     video_labels = []
-    video_frames_1 = []
-    video_frames_2 = []
-    video_frames_3 = []
+    video_features = []
     # extracting data
     for v in batch:
         video_path = v
-        video_labels.append([0.0])  # original frames
-        video_labels.append([1.0])  # interpolated frames
-        video_labels.append([0.0])  # original residuals
-        video_labels.append([1.0])  # interpolated residuals
-        video_labels.append([0.0])  # original optical flow
-        video_labels.append([1.0])  # interpolated optical flow
+        video_labels.append([0.0])  # original
+        video_labels.append([1.0])  # interpolated
         interpolated_path = "/nas/home/smariani/video_interpolation/datasets/kinetics400/minterpolate/test/" \
                             + os.path.basename(video_path)
         # preprocessing operation, [naive residuals] (will also keep just t frames and resize them to n x n)
-        original_frames = get_original_frames(video_path, n, t, training=False)
-        interp_frames = get_original_frames(interpolated_path, n, t, training=False)
-        original_res = get_naive_residuals(video_path, n, t, training=False)
-        interp_res = get_naive_residuals(interpolated_path, n, t, training=False)
-        original_of = of(video_path, n, t, training=False)
-        interp_of = of(interpolated_path, n, t, training=False)
-        video_frames_1.append(original_frames)
-        video_frames_1.append(interp_frames)
-        video_frames_2.append(original_res)
-        video_frames_2.append(interp_res)
-        video_frames_3.append(original_of)
-        video_frames_3.append(interp_of)
+        original_frames, original_res, original_of = extract_global_features(video_path, n, t, training=False)
+        interp_frames, interp_res, interp_of = extract_global_features(interpolated_path, n, t, training=False)
+        original_features = [original_frames, original_res, original_of]
+        interpolated_features = [interp_frames, interp_res, interp_of]
+        video_features.append(original_features)
+        video_features.append(interpolated_features)
     # building input tensor
     video_labels = torch.tensor(video_labels)
-    video_frames = [video_frames_1, video_frames_2, video_frames_3]
-    data = generate_data(video_frames, n, t, c)
+    data = generate_data(video_features, n, t, c)
     return data, video_labels
 
 
@@ -238,7 +205,7 @@ def generate_data(f_list, n, t, c):
 
     frames_list = np.array(f_list)  # original, interpolated
     data = torch.autograd.Variable(torch.tensor(frames_list))
-    data = torch.reshape(data, (len(f_list), len(f_list[0]), t, n, n, c))
+    data = torch.reshape(data, (frames_list.shape[0], frames_list.shape[1], t, n, n, c))
     data = torch.permute(data, [0, 1, 5, 2, 3, 4])
     data = data.float()
 

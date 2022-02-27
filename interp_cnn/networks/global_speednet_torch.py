@@ -393,10 +393,10 @@ class Mixed_5c(nn.Module):
 
 class S3DG(nn.Module):
 
-    def __init__(self, num_classes=1, input_channel=3, num_frames=64):
+    def __init__(self, num_classes=1, num_frames=64, input_channels=3):
         super(S3DG, self).__init__()
         self.features = nn.Sequential(
-            STConv3d(input_channel, 64, kernel_size=7, stride=2, padding=3),
+            STConv3d(input_channels, 64, kernel_size=7, stride=2, padding=3),
             nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)),
             BasicConv3d(64, 64, kernel_size=1, stride=1),
             STConv3d(64, 192, kernel_size=3, stride=1, padding=1),
@@ -422,25 +422,19 @@ class S3DG(nn.Module):
         self.linear_2 = nn.Linear(3, 1)
 
     def forward(self, x):
-        i_1 = torch.tensor([0])
-        x_1 = torch.index_select(x, 0, i_1)
-        x_1 = torch.squeeze(x_1, 0)
+        x = torch.squeeze(x, 0)
+        x_1 = x[:, 0]
         x_1 = self.features(x_1)
         x_1 = self.dropout(x_1.view(x_1.size(0), -1))
         x_1 = self.linear_1(x_1)
-        i_2 = torch.tensor([1])
-        x_2 = torch.index_select(x, 0, i_2)
-        x_2 = torch.squeeze(x_2, 0)
+        x_2 = x[:, 1]
         x_2 = self.features(x_2)
         x_2 = self.dropout(x_2.view(x_2.size(0), -1))
         x_2 = self.linear_1(x_2)
-        i_3 = torch.tensor([2])
-        x_3 = torch.index_select(x, 0, i_3)
-        x_3 = torch.squeeze(x_3, 0)
+        x_3 = x[:, 2]
         x_3 = self.features(x_3)
         x_3 = self.dropout(x_3.view(x_3.size(0), -1))
         x_3 = self.linear_1(x_3)
         x_tot = torch.cat((x_1, x_2, x_3), 1)
-        print(x_tot.shape)
         logit = self.linear_2(x_tot)
         return logit
