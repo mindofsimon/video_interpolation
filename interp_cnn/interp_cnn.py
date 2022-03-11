@@ -24,6 +24,7 @@ from global_interp_cnn_utils import *
 import pandas as pd
 from utils.torch_utils import *
 from tqdm import tqdm
+from init_global_weights import global_state_dict
 
 
 # Input Parameters
@@ -160,15 +161,18 @@ def main():
     else:
         if not NEW_TRAINING_CYCLE:
             model.load_state_dict(torch.load(save_path))
-    model.to(platf)
+    model = model.to(platf)
+    pretrained_dict = global_state_dict(platf)
+    model.load_state_dict(pretrained_dict)
     model.train()
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=1e-02)
+    # optimizer = optim.Adam(model.parameters(), lr=1e-02)
+    optimizer = optim.Adam(model.module.final_linear.parameters(), lr=1e-02)
     lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, mode='min', verbose=True)
     epochs = 15
     best_acc = 0
     no_improvement = 0     # n of epochs with no improvements
-    patience = 7          # max n of epoch with no improvements
+    patience = 7           # max n of epoch with no improvements
     min_val_loss = np.inf
     history = []
 

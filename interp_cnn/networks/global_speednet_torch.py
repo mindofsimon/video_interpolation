@@ -395,7 +395,7 @@ class S3DG(nn.Module):
 
     def __init__(self, num_classes=1, num_frames=64, input_channels=3):
         super(S3DG, self).__init__()
-        self.features = nn.Sequential(
+        self.frames = nn.Sequential(
             STConv3d(input_channels, 64, kernel_size=7, stride=2, padding=3),
             nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)),
             BasicConv3d(64, 64, kernel_size=1, stride=1),
@@ -414,27 +414,73 @@ class S3DG(nn.Module):
             Mixed_5c(),
             nn.MaxPool3d(kernel_size=(num_frames, 1, 1), stride=1),  # equal to global max pooling (reducing space)
             nn.AdaptiveAvgPool3d(output_size=(1, 1, 1)),  # equal to global average pooling (reducing time)
-            nn.Conv3d(1024, 512, kernel_size=1, stride=1, bias=True),
+            nn.Conv3d(1024, 512, kernel_size=1, stride=1, bias=True)
         )
-
-        self.dropout = nn.Dropout(0.5)
+        self.residuals = nn.Sequential(
+            STConv3d(input_channels, 64, kernel_size=7, stride=2, padding=3),
+            nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)),
+            BasicConv3d(64, 64, kernel_size=1, stride=1),
+            STConv3d(64, 192, kernel_size=3, stride=1, padding=1),
+            nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)),
+            Mixed_3b(),
+            Mixed_3c(),
+            nn.MaxPool3d(kernel_size=(3, 3, 3), stride=(1, 2, 2), padding=(1, 1, 1)),
+            Mixed_4b(),
+            Mixed_4c(),
+            Mixed_4d(),
+            Mixed_4e(),
+            Mixed_4f(),
+            nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2), padding=(0, 0, 0)),
+            Mixed_5b(),
+            Mixed_5c(),
+            nn.MaxPool3d(kernel_size=(num_frames, 1, 1), stride=1),  # equal to global max pooling (reducing space)
+            nn.AdaptiveAvgPool3d(output_size=(1, 1, 1)),  # equal to global average pooling (reducing time)
+            nn.Conv3d(1024, 512, kernel_size=1, stride=1, bias=True)
+        )
+        self.of = nn.Sequential(
+            STConv3d(input_channels, 64, kernel_size=7, stride=2, padding=3),
+            nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)),
+            BasicConv3d(64, 64, kernel_size=1, stride=1),
+            STConv3d(64, 192, kernel_size=3, stride=1, padding=1),
+            nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)),
+            Mixed_3b(),
+            Mixed_3c(),
+            nn.MaxPool3d(kernel_size=(3, 3, 3), stride=(1, 2, 2), padding=(1, 1, 1)),
+            Mixed_4b(),
+            Mixed_4c(),
+            Mixed_4d(),
+            Mixed_4e(),
+            Mixed_4f(),
+            nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2), padding=(0, 0, 0)),
+            Mixed_5b(),
+            Mixed_5c(),
+            nn.MaxPool3d(kernel_size=(num_frames, 1, 1), stride=1),  # equal to global max pooling (reducing space)
+            nn.AdaptiveAvgPool3d(output_size=(1, 1, 1)),  # equal to global average pooling (reducing time)
+            nn.Conv3d(1024, 512, kernel_size=1, stride=1, bias=True)
+        )
+        self.dropout_1 = nn.Dropout(0.5)
+        self.dropout_2 = nn.Dropout(0.5)
+        self.dropout_3 = nn.Dropout(0.5)
         self.linear_1 = nn.Linear(512, num_classes)
-        self.linear_2 = nn.Linear(3, 1)
+        self.linear_2 = nn.Linear(512, num_classes)
+        self.linear_3 = nn.Linear(512, num_classes)
+        self.final_linear = nn.Linear(3, 1)
+        # nn.init.xavier_uniform_(self.final_linear.weight)
 
-    def forward(self, x):
-        x = torch.squeeze(x, 0)
-        x_1 = x[:, 0]
-        x_1 = self.features(x_1)
-        x_1 = self.dropout(x_1.view(x_1.size(0), -1))
+    def forward(self, x):  # [2, 3, 1, 16, 224, 224]
+        # input x is BATCH_SIZE x [frames, res, of] x CHANNELS x N_FRAMES x H x W
+        x_1 = x[:, 0]  # frames [2, 1, 16, 224, 224]
+        x_1 = self.frames(x_1)
+        x_1 = self.dropout_1(x_1.view(x_1.size(0), -1))
         x_1 = self.linear_1(x_1)
-        x_2 = x[:, 1]
-        x_2 = self.features(x_2)
-        x_2 = self.dropout(x_2.view(x_2.size(0), -1))
-        x_2 = self.linear_1(x_2)
-        x_3 = x[:, 2]
-        x_3 = self.features(x_3)
-        x_3 = self.dropout(x_3.view(x_3.size(0), -1))
-        x_3 = self.linear_1(x_3)
-        x_tot = torch.cat((x_1, x_2, x_3), 1)
-        logit = self.linear_2(x_tot)
-        return logit
+        x_2 = x[:, 1]  # residuals [2, 1, 16, 224, 224]
+        x_2 = self.residuals(x_2)
+        x_2 = self.dropout_2(x_2.view(x_2.size(0), -1))
+        x_2 = self.linear_2(x_2)
+        x_3 = x[:, 2]  # optical flow [2, 1, 16, 224, 224]
+        x_3 = self.of(x_3)
+        x_3 = self.dropout_3(x_3.view(x_3.size(0), -1))
+        x_3 = self.linear_3(x_3)
+        x_tot = torch.cat((x_1, x_2, x_3), 1)  # concatenating outputs [2, 3]
+        # x_tot = self.final_linear(x_tot)  # final output [2, 1]
+        return x_tot  # sigmoid will be applied outside

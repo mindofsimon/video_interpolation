@@ -51,7 +51,7 @@ def main():
         model.load_state_dict(torch.load(save_path))
     if MULTI_GPU_TESTING:
         model = nn.DataParallel(model)  # (multi GPU)
-    model.to(plat)
+    model = model.to(plat)
     model.eval()
     vid = '/nas/home/pbestagini/video_interpolation_detection/test_orig.mp4'  # video to test
     pred = test_video(vid, model, plat)
